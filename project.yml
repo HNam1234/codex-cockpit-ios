@@ -10,8 +10,8 @@ settings:
     IPHONEOS_DEPLOYMENT_TARGET: "17.0"
     TARGETED_DEVICE_FAMILY: "1"
     SUPPORTS_MACCATALYST: false
-    MARKETING_VERSION: "1.0.1"
-    CURRENT_PROJECT_VERSION: "2"
+    MARKETING_VERSION: "1.0.2"
+    CURRENT_PROJECT_VERSION: "3"
     CODE_SIGN_STYLE: Automatic
     DEVELOPMENT_TEAM: ""
     ENABLE_USER_SCRIPT_SANDBOXING: true
@@ -45,12 +45,24 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: vn.nam.CodexCockpitTests
+  CodexCockpitUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: CodexCockpitUITests
+    dependencies:
+      - target: CodexCockpit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: vn.nam.CodexCockpitUITests
 schemes:
   CodexCockpit:
     build:
       targets:
         CodexCockpit: all
         CodexCockpitTests: [test]
+        CodexCockpitUITests: [test]
     test:
       targets:
         - CodexCockpitTests
+        - CodexCockpitUITests

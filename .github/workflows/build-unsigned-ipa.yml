@@ -16,6 +16,15 @@ jobs:
         run: |
           python3 scripts/generate_icon.py
           xcodegen generate
+      - name: UI smoke test on iOS Simulator
+        run: |
+          DEVICE=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; print(next(x["name"] for runtime in d.values() for x in runtime if x["name"].startswith("iPhone")))')
+          xcodebuild \
+            -project CodexCockpit.xcodeproj \
+            -scheme CodexCockpit \
+            -destination "platform=iOS Simulator,name=$DEVICE" \
+            -only-testing:CodexCockpitUITests/LaunchTests/testLaunchesDirectlyIntoMainTabsWithoutLockScreen \
+            test
       - name: Build device app without signing
         run: |
           xcodebuild \

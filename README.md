@@ -9,7 +9,7 @@ SwiftUI prototype for iOS 17+ with one dashboard session and five persistent, is
 - Device-code entry opens `auth.openai.com/codex/device` inside the selected profile and attempts to fill the code. The user still confirms on the official OpenAI page.
 - Device code is only copied to the local iPhone clipboard; the app does not upload it.
 - Per-profile clear-session action.
-- Optional Face ID/device-passcode lock.
+- Launches directly into the dashboard; the unstable startup Face ID gate is disabled.
 - Face ID preference uses a namespaced key so re-signing with a reused bundle ID cannot inherit another app's lock state.
 - Only one profile WebView is alive while its screen is open.
 
