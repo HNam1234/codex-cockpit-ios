@@ -43,4 +43,4 @@ xcodebuild \
   -exportOptionsPlist "$BUILD/ExportOptions.plist" \
   -allowProvisioningUpdates
 
-echo "Signed IPA: $BUILD/export/Codex Cockpit.ipa"
+echo "Signed IPA is in: $BUILD/export/"

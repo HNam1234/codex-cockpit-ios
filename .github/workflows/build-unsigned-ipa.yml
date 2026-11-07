@@ -40,7 +40,7 @@ jobs:
       - name: Package unsigned IPA
         run: |
           mkdir -p .build/Payload
-          cp -R .build/DerivedData/Build/Products/Release-iphoneos/Codex\ Cockpit.app .build/Payload/
+          cp -R .build/DerivedData/Build/Products/Release-iphoneos/CodexCockpit.app .build/Payload/
           cd .build
           zip -qry CodexCockpit-unsigned.ipa Payload
       - uses: actions/upload-artifact@v4
