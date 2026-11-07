@@ -27,6 +27,13 @@ jobs:
             -scheme CodexCockpit \
             -destination "platform=iOS Simulator,name=$DEVICE" \
             test
+          DEVICE_UDID=$(xcrun simctl list devices booted -j | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; print(next(x["udid"] for runtime in d.values() for x in runtime))')
+          APP_PATH=$(find "$HOME/Library/Developer/Xcode/DerivedData" -path '*/Build/Products/Debug-iphonesimulator/CodexCockpit.app' -print -quit)
+          xcrun simctl install "$DEVICE_UDID" "$APP_PATH"
+          xcrun simctl launch "$DEVICE_UDID" vn.nam.CodexCockpit
+          sleep 10
+          mkdir -p .build/preview
+          xcrun simctl io "$DEVICE_UDID" screenshot .build/preview/cockpit-home.png
       - name: Build device app without signing
         run: |
           xcodebuild \
@@ -49,4 +56,9 @@ jobs:
         with:
           name: CodexCockpit-unsigned
           path: .build/CodexCockpit-unsigned.ipa
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CodexCockpit-preview
+          path: .build/preview/cockpit-home.png
           if-no-files-found: error
