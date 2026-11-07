@@ -12,7 +12,7 @@ struct SettingsView: View {
                     VStack(spacing: 10) {
                         ProfileArtwork(seed: "settings", symbol: "command", size: 92)
                         Text("Codex Cockpit").font(.title.weight(.bold))
-                        Text("1.2.1 · Premium quota control").font(.subheadline).foregroundStyle(.secondary)
+                        Text("1.3.0 · Premium quota control").font(.subheadline).foregroundStyle(.secondary)
                     }
                     .padding(.vertical, 8)
 
@@ -28,7 +28,7 @@ struct SettingsView: View {
                             .font(.subheadline).foregroundStyle(.secondary)
                     }
                     settingsCard("TIBO", icon: "waveform.path.ecg", tint: CockpitTheme.accent) {
-                        Text("VPS chỉ đọc feed reset công khai mỗi 15 phút. Không quota, email hoặc token tài khoản nào được gửi cho TIBO.")
+                        Text("VPS đọc tracker OpenTheRank và trạng thái công khai @thsottiaux trên X mỗi 15 phút. Tỷ lệ hôm nay là ước tính từ lịch sử + tín hiệu X; không dữ liệu tài khoản nào được gửi ra ngoài.")
                             .font(.subheadline).foregroundStyle(.secondary)
                     }
                 }

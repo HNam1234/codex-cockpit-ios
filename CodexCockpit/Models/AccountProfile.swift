@@ -45,6 +45,18 @@ struct QuotaWindow: Decodable, Hashable, Identifiable {
 }
 
 struct TiboResetStatus: Decodable, Hashable {
+    struct Post: Decodable, Hashable {
+        let text: String
+        let id: String
+        let createdAt: String
+        let url: String
+
+        enum CodingKeys: String, CodingKey {
+            case text, id, url
+            case createdAt = "created_at"
+        }
+    }
+
     let status: String
     let kind: String?
     let message: String
@@ -52,10 +64,20 @@ struct TiboResetStatus: Decodable, Hashable {
     let pendingAt: String?
     let fetchedAt: Int
     let source: String
+    let xSource: String?
+    let latestPost: Post?
+    let hintPost: Post?
+    let probabilityToday: Int?
+    let probabilityBasis: String?
     let stale: Bool
 
     enum CodingKeys: String, CodingKey {
         case status, kind, message, source, stale
+        case xSource = "x_source"
+        case latestPost = "latest_post"
+        case hintPost = "hint_post"
+        case probabilityToday = "probability_today"
+        case probabilityBasis = "probability_basis"
         case latestAt = "latest_at"
         case pendingAt = "pending_at"
         case fetchedAt = "fetched_at"

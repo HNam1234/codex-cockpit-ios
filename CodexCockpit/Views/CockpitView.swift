@@ -12,13 +12,12 @@ struct CockpitView: View {
                 ZStack {
                     CockpitBackdrop()
                     ScrollView(showsIndicators: false) {
-                        LazyVStack(alignment: .leading, spacing: 22) {
+                        LazyVStack(alignment: .leading, spacing: 13) {
                             heroHeader
                             if let signal = store.tiboReset { TiboResetBanner(signal: signal) }
                             accountShelf
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 28)
+                        .padding(.horizontal, 13).padding(.bottom, 18)
                     }
                     .refreshable { await store.load() }
                 }
@@ -30,7 +29,7 @@ struct CockpitView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Button { Task { await store.load() } } label: {
                     ZStack {
-                        Circle().fill(.thinMaterial).frame(width: 36, height: 36)
+                        Circle().fill(.thinMaterial).frame(width: 34, height: 34)
                         if store.isLoading { ProgressView().controlSize(.small) }
                         else { Image(systemName: "arrow.clockwise").font(.subheadline.weight(.bold)) }
                     }
@@ -44,41 +43,34 @@ struct CockpitView: View {
     }
 
     private var heroHeader: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 3) {
             Text("CODEX COCKPIT")
-                .font(.caption.weight(.bold)).tracking(1.6).foregroundStyle(CockpitTheme.accent)
-            Text("Quota của bạn")
-                .font(.system(size: 34, weight: .bold, design: .rounded))
-            Text("\(store.accounts.count) tài khoản · cập nhật theo thời gian thực")
-                .font(.subheadline).foregroundStyle(.secondary)
+                .font(.caption2.weight(.bold)).tracking(1.5).foregroundStyle(CockpitTheme.accent)
+            Text("Quota của bạn").font(.system(size: 29, weight: .bold, design: .rounded))
+            Text("\(store.accounts.count) tài khoản · realtime")
+                .font(.caption).foregroundStyle(.secondary)
         }
-        .padding(.top, 8)
+        .padding(.top, 3)
     }
 
     @ViewBuilder
     private var accountShelf: some View {
-        VStack(alignment: .leading, spacing: 13) {
-            SectionHeading(title: "Tài khoản", caption: store.accounts.isEmpty ? nil : "Vuốt để xem")
+        VStack(alignment: .leading, spacing: 8) {
+            SectionHeading(title: "Tài khoản", caption: store.accounts.isEmpty ? nil : "HIỂN THỊ TẤT CẢ")
             if store.accounts.isEmpty && store.isLoading {
-                ProgressView("Đang tải quota…").frame(maxWidth: .infinity).padding(.vertical, 80)
+                ProgressView("Đang tải quota…").frame(maxWidth: .infinity).padding(.vertical, 60)
             } else if store.accounts.isEmpty {
                 ContentUnavailableView("Chưa có tài khoản", systemImage: "person.crop.circle.badge.questionmark")
                     .frame(maxWidth: .infinity).glassCard()
             } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHStack(spacing: 14) {
-                        ForEach(store.accounts) { account in
-                            Button { router.showAccount(account.id) } label: {
-                                AccountOverviewCard(account: account)
-                            }
-                            .buttonStyle(.plain)
-                            .containerRelativeFrame(.horizontal, count: 1, span: 1, spacing: 14)
+                LazyVStack(spacing: 8) {
+                    ForEach(store.accounts) { account in
+                        Button { router.showAccount(account.id) } label: {
+                            AccountOverviewCard(account: account)
                         }
+                        .buttonStyle(.plain)
                     }
-                    .scrollTargetLayout()
                 }
-                .contentMargins(.horizontal, 0, for: .scrollContent)
-                .scrollTargetBehavior(.viewAligned)
             }
         }
     }
@@ -101,33 +93,46 @@ struct TiboResetBanner: View {
     }
 
     var body: some View {
-        ZStack(alignment: .bottomLeading) {
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
+        ZStack {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .fill(LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing))
-            Circle().fill(.white.opacity(0.18)).frame(width: 160).blur(radius: 3).offset(x: 245, y: -55)
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Label("TIBO SIGNAL", systemImage: "waveform.path.ecg")
-                        .font(.caption.weight(.heavy)).tracking(1.2)
-                    Spacer()
-                    Image(systemName: "sparkles").font(.title3)
-                }
-                Text(signal.message)
-                    .font(.title3.weight(.bold)).lineLimit(3)
-                HStack {
-                    Text("Feed công khai · không gửi dữ liệu account")
-                        .font(.caption2).opacity(0.84)
-                    Spacer()
-                    if let url = URL(string: signal.source) {
-                        Link(destination: url) { Image(systemName: "arrow.up.right.circle.fill").font(.title3) }
+            Circle().fill(.white.opacity(0.15)).frame(width: 120).blur(radius: 4).offset(x: 145, y: -35)
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 5) {
+                    Label("TIBO ON X", systemImage: "waveform.path.ecg")
+                        .font(.caption2.weight(.heavy)).tracking(1.1)
+                    if let post = signal.hintPost {
+                        Text("“\(post.text)”").font(.headline.weight(.bold)).lineLimit(2)
+                        if let url = URL(string: post.url) {
+                            Link("@thsottiaux · mở trên X", destination: url)
+                                .font(.caption2.weight(.semibold)).opacity(0.86)
+                        }
+                    } else {
+                        Text(signal.message).font(.subheadline.weight(.bold)).lineLimit(2)
                     }
                 }
+                Spacer(minLength: 2)
+                VStack(spacing: 3) {
+                    ZStack {
+                        Circle().stroke(.white.opacity(0.22), lineWidth: 6)
+                        Circle()
+                            .trim(from: 0, to: CGFloat(signal.probabilityToday ?? 0) / 100)
+                            .stroke(.white, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                            .rotationEffect(.degrees(-90))
+                        Text("\(signal.probabilityToday ?? 0)%")
+                            .font(.headline.monospacedDigit().weight(.heavy))
+                    }
+                    .frame(width: 56, height: 56)
+                    Text("RESET HÔM NAY").font(.system(size: 8, weight: .heavy)).tracking(0.4)
+                }
             }
-            .foregroundStyle(.white).padding(18)
+            .foregroundStyle(.white).padding(13)
         }
-        .frame(minHeight: 168)
-        .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
-        .shadow(color: colors[0].opacity(0.26), radius: 20, y: 10)
+        .frame(height: 108)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .shadow(color: colors[0].opacity(0.22), radius: 14, y: 7)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("TIBO: \(signal.hintPost?.text ?? signal.message). Xác suất reset hôm nay \(signal.probabilityToday ?? 0) phần trăm")
     }
 }
 
@@ -135,40 +140,55 @@ struct AccountOverviewCard: View {
     let account: AccountSnapshot
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            HStack(spacing: 13) {
-                ProfileArtwork(seed: account.id, symbol: account.ok ? "command" : "exclamationmark", size: 62)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(account.identity).font(.title3.weight(.bold)).lineLimit(1)
-                    Text([account.name, account.plan?.uppercased()].compactMap { $0 }.joined(separator: " · "))
-                        .font(.caption.weight(.medium)).foregroundStyle(.secondary).lineLimit(1)
-                }
-                Spacer()
-                Image(systemName: "ellipsis").foregroundStyle(.secondary)
+        HStack(spacing: 9) {
+            ProfileArtwork(seed: account.id, symbol: account.ok ? "command" : "exclamationmark", size: 42)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(account.identity).font(.subheadline.weight(.bold)).lineLimit(1)
+                Text([account.name, account.plan?.uppercased()].compactMap { $0 }.joined(separator: " · "))
+                    .font(.caption2.weight(.medium)).foregroundStyle(.secondary).lineLimit(1)
             }
-
-            if let error = account.error, !account.ok {
-                Label(error, systemImage: "exclamationmark.triangle.fill")
-                    .font(.caption).foregroundStyle(.red).lineLimit(2)
+            .frame(maxWidth: 112, alignment: .leading)
+            Spacer(minLength: 2)
+            if account.ok {
+                VStack(spacing: 6) {
+                    ForEach(account.windows.prefix(2)) { window in MiniQuotaRow(window: window) }
+                }
+                .frame(width: 132)
             } else {
-                VStack(spacing: 14) {
-                    ForEach(account.windows.prefix(2)) { window in
-                        QuotaProgressRow(window: window, compact: true)
-                    }
+                Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.red)
+            }
+            Image(systemName: "chevron.right").font(.caption.weight(.bold)).foregroundStyle(.tertiary)
+        }
+        .padding(.horizontal, 11).padding(.vertical, 8)
+        .frame(maxWidth: .infinity, minHeight: 63)
+        .glassCard(cornerRadius: 18)
+    }
+}
+
+private struct MiniQuotaRow: View {
+    let window: QuotaWindow
+
+    private var color: Color {
+        switch window.remainingPercent { case 50...: .green; case 20..<50: .orange; default: CockpitTheme.accent }
+    }
+
+    var body: some View {
+        VStack(spacing: 3) {
+            HStack(spacing: 3) {
+                Text(window.label).font(.system(size: 9, weight: .bold)).lineLimit(1)
+                Spacer()
+                Text("\(Int(window.remainingPercent.rounded()))%")
+                    .font(.system(size: 9, weight: .heavy, design: .monospaced)).foregroundStyle(color)
+            }
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(.secondary.opacity(0.12))
+                    Capsule().fill(color)
+                        .frame(width: proxy.size.width * max(0, min(1, window.remainingPercent / 100)))
                 }
             }
-
-            HStack {
-                Label("Mở chi tiết", systemImage: "play.circle.fill")
-                    .font(.subheadline.weight(.bold)).foregroundStyle(CockpitTheme.accent)
-                Spacer()
-                Text("LIVE").font(.caption2.weight(.heavy)).tracking(1)
-                    .foregroundStyle(account.ok ? .green : .red)
-            }
+            .frame(height: 4)
         }
-        .padding(18)
-        .frame(maxWidth: .infinity, minHeight: 260, alignment: .topLeading)
-        .glassCard(cornerRadius: 28)
     }
 }
 
