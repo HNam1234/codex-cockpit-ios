@@ -23,7 +23,7 @@ jobs:
             -project CodexCockpit.xcodeproj \
             -scheme CodexCockpit \
             -destination "platform=iOS Simulator,name=$DEVICE" \
-            -only-testing:CodexCockpitUITests/LaunchTests/testLaunchesDirectlyIntoMainTabsWithoutLockScreen \
+            -only-testing:CodexCockpitUITests/LaunchTests \
             test
       - name: Build device app without signing
         run: |

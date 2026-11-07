@@ -6,15 +6,17 @@ struct CockpitView: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-            if ProcessInfo.processInfo.environment["UITEST_MODE"] == "1" {
+            let testMode = ProcessInfo.processInfo.environment["UITEST_MODE"]
+            if testMode == "static" {
                 Text("Cockpit ready")
                     .accessibilityIdentifier("cockpit-ready")
             } else {
                 ProfileWebView(
                     dataStoreIdentifier: AccountProfile.dashboardDataStoreIdentifier,
-                    initialURL: AppURLs.dashboard,
+                    initialURL: testMode == "webview" ? URL(string: "about:blank")! : AppURLs.dashboard,
                     state: browser
                 )
+                .accessibilityIdentifier("cockpit-webview")
             }
 
             if browser.isLoading {

@@ -7,7 +7,7 @@ final class LaunchTests: XCTestCase {
 
     func testLaunchesDirectlyIntoMainTabsWithoutLockScreen() {
         let app = XCUIApplication()
-        app.launchEnvironment["UITEST_MODE"] = "1"
+        app.launchEnvironment["UITEST_MODE"] = "static"
         app.launch()
 
         XCTAssertTrue(app.staticTexts["cockpit-ready"].waitForExistence(timeout: 10))
@@ -15,5 +15,15 @@ final class LaunchTests: XCTestCase {
         XCTAssertTrue(app.tabBars.buttons["5 tài khoản"].exists)
         XCTAssertTrue(app.tabBars.buttons["Cài đặt"].exists)
         XCTAssertFalse(app.buttons["Mở bằng Face ID / mật mã"].exists)
+    }
+
+    func testCreatesRealPersistentProfileWebViewWithoutCrashing() {
+        let app = XCUIApplication()
+        app.launchEnvironment["UITEST_MODE"] = "webview"
+        app.launch()
+
+        XCTAssertTrue(app.tabBars.buttons["Cockpit"].waitForExistence(timeout: 15))
+        XCTAssertTrue(app.otherElements["cockpit-webview"].waitForExistence(timeout: 15))
+        XCTAssertEqual(app.state, .runningForeground)
     }
 }
