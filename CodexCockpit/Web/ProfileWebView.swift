@@ -29,7 +29,9 @@ struct ProfileWebView: UIViewRepresentable {
     }
 
     func updateUIView(_ webView: WKWebView, context: Context) {
-        state.update(from: webView)
+        // Intentionally empty. Browser state is driven by KVO/navigation
+        // callbacks. Publishing ObservableObject changes from this SwiftUI
+        // update callback creates a render loop and can exhaust the process.
     }
 
     static func dismantleUIView(_ webView: WKWebView, coordinator: Coordinator) {

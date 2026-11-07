@@ -22,7 +22,7 @@ struct SettingsView: View {
                     .font(.footnote).foregroundStyle(.secondary)
             }
             Section("Phiên bản") {
-                LabeledContent("Codex Cockpit", value: "1.0.2 (3)")
+                LabeledContent("Codex Cockpit", value: "1.0.3 (4)")
                 if let statusText { Text(statusText).font(.footnote) }
             }
         }
