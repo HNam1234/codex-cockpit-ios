@@ -1,0 +1,41 @@
+name: Build unsigned IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        run: |
+          python3 scripts/generate_icon.py
+          xcodegen generate
+      - name: Build device app without signing
+        run: |
+          xcodebuild \
+            -project CodexCockpit.xcodeproj \
+            -scheme CodexCockpit \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath .build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+      - name: Package unsigned IPA
+        run: |
+          mkdir -p .build/Payload
+          cp -R .build/DerivedData/Build/Products/Release-iphoneos/Codex\ Cockpit.app .build/Payload/
+          cd .build
+          zip -qry CodexCockpit-unsigned.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CodexCockpit-unsigned
+          path: .build/CodexCockpit-unsigned.ipa
+          if-no-files-found: error
