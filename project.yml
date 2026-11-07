@@ -10,8 +10,8 @@ settings:
     IPHONEOS_DEPLOYMENT_TARGET: "17.0"
     TARGETED_DEVICE_FAMILY: "1"
     SUPPORTS_MACCATALYST: false
-    MARKETING_VERSION: "1.0.4"
-    CURRENT_PROJECT_VERSION: "5"
+    MARKETING_VERSION: "1.1.0"
+    CURRENT_PROJECT_VERSION: "6"
     CODE_SIGN_STYLE: Automatic
     DEVELOPMENT_TEAM: ""
     ENABLE_USER_SCRIPT_SANDBOXING: true
@@ -28,7 +28,7 @@ targets:
         GENERATE_INFOPLIST_FILE: true
         INFOPLIST_KEY_CFBundleDisplayName: Codex Cockpit
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.productivity
-        INFOPLIST_KEY_NSFaceIDUsageDescription: Khóa năm phiên Codex và dashboard bằng Face ID.
+        INFOPLIST_KEY_NSFaceIDUsageDescription: Khóa các phiên Codex và dashboard bằng Face ID.
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: true
         INFOPLIST_KEY_UILaunchScreen_Generation: true
         INFOPLIST_KEY_UIRequiresFullScreen: true

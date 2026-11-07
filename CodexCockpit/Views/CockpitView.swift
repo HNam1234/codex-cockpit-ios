@@ -2,6 +2,7 @@ import SwiftUI
 
 struct CockpitView: View {
     @StateObject private var browser = BrowserState()
+    @EnvironmentObject private var router: AppRouter
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -15,7 +16,9 @@ struct CockpitView: View {
                     initialRequest: testMode == "webview"
                         ? URLRequest(url: URL(string: "about:blank")!)
                         : AppURLs.dashboardRequest,
-                    state: browser
+                    state: browser,
+                    automaticLoginRequest: testMode == nil ? AppURLs.dashboardRequest : nil,
+                    onProfileRoute: { router.open($0) }
                 )
                 .accessibilityIdentifier("cockpit-webview")
             }

@@ -6,8 +6,16 @@ struct ProfileWebView: UIViewRepresentable {
     let dataStoreIdentifier: UUID
     let initialRequest: URLRequest
     @ObservedObject var state: BrowserState
+    var automaticLoginRequest: URLRequest? = nil
+    var onProfileRoute: ((ProfileRoute) -> Void)? = nil
 
-    func makeCoordinator() -> Coordinator { Coordinator(state: state) }
+    func makeCoordinator() -> Coordinator {
+        Coordinator(
+            state: state,
+            automaticLoginRequest: automaticLoginRequest,
+            onProfileRoute: onProfileRoute
+        )
+    }
 
     func makeUIView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
@@ -43,9 +51,19 @@ struct ProfileWebView: UIViewRepresentable {
 
     final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         private let state: BrowserState
+        private let automaticLoginRequest: URLRequest?
+        private let onProfileRoute: ((ProfileRoute) -> Void)?
         private var observations: [NSKeyValueObservation] = []
 
-        init(state: BrowserState) { self.state = state }
+        init(
+            state: BrowserState,
+            automaticLoginRequest: URLRequest?,
+            onProfileRoute: ((ProfileRoute) -> Void)?
+        ) {
+            self.state = state
+            self.automaticLoginRequest = automaticLoginRequest
+            self.onProfileRoute = onProfileRoute
+        }
 
         func observe(_ webView: WKWebView) {
             let update: (WKWebView) -> Void = { [weak self] webView in
@@ -77,6 +95,11 @@ struct ProfileWebView: UIViewRepresentable {
                 decisionHandler(.cancel)
                 return
             }
+            if let route = AppURLs.profileRoute(from: url) {
+                onProfileRoute?(route)
+                decisionHandler(.cancel)
+                return
+            }
             if ["https", "about", "data", "blob"].contains(scheme) {
                 decisionHandler(.allow)
             } else if UIApplication.shared.canOpenURL(url) {
@@ -85,6 +108,24 @@ struct ProfileWebView: UIViewRepresentable {
             } else {
                 decisionHandler(.cancel)
             }
+        }
+
+        func webView(
+            _ webView: WKWebView,
+            decidePolicyFor navigationResponse: WKNavigationResponse,
+            decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void
+        ) {
+            guard let response = navigationResponse.response as? HTTPURLResponse,
+                  response.statusCode == 401,
+                  let url = response.url,
+                  url.host == AppURLs.dashboard.host,
+                  url.path != AppURLs.dashboardAppLogin.path,
+                  let automaticLoginRequest else {
+                decisionHandler(.allow)
+                return
+            }
+            decisionHandler(.cancel)
+            webView.load(automaticLoginRequest)
         }
 
         func webView(

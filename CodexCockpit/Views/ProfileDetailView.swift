@@ -3,10 +3,17 @@ import UIKit
 
 struct ProfileDetailView: View {
     let profile: AccountProfile
+    let initialAction: ProfileAction
     @StateObject private var browser = BrowserState()
     @State private var showingDeviceCode = false
     @State private var showingClearConfirmation = false
     @State private var webViewGeneration = UUID()
+    @State private var appliedInitialAction = false
+
+    init(profile: AccountProfile, initialAction: ProfileAction = .web) {
+        self.profile = profile
+        self.initialAction = initialAction
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -29,6 +36,11 @@ struct ProfileDetailView: View {
         }
         .navigationTitle(profile.name)
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            guard !appliedInitialAction else { return }
+            appliedInitialAction = true
+            if initialAction == .device { showingDeviceCode = true }
+        }
         .sheet(isPresented: $showingDeviceCode) {
             DeviceCodeSheet { code in
                 if !code.isEmpty { UIPasteboard.general.string = code }

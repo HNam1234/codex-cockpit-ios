@@ -12,7 +12,7 @@ final class BrowserState: ObservableObject {
     @Published var errorMessage: String?
 
     weak var webView: WKWebView?
-    var pendingURL: URL?
+    var pendingRequest: URLRequest?
     var pendingDeviceCode: String?
 
     func open(_ url: URL) {
@@ -20,7 +20,7 @@ final class BrowserState: ObservableObject {
         if let webView {
             webView.load(URLRequest(url: url, cachePolicy: .reloadRevalidatingCacheData))
         } else {
-            pendingURL = url
+            pendingRequest = URLRequest(url: url, cachePolicy: .reloadRevalidatingCacheData)
         }
     }
 
@@ -28,8 +28,8 @@ final class BrowserState: ObservableObject {
         errorMessage = nil
         if let webView {
             webView.load(request)
-        } else if let url = request.url {
-            pendingURL = url
+        } else {
+            pendingRequest = request
         }
     }
 
@@ -44,12 +44,12 @@ final class BrowserState: ObservableObject {
 
     func attach(_ webView: WKWebView, initialRequest: URLRequest) {
         self.webView = webView
-        if let pendingURL {
-            open(pendingURL)
+        if let pendingRequest {
+            open(pendingRequest)
         } else {
             open(initialRequest)
         }
-        pendingURL = nil
+        pendingRequest = nil
     }
 
     func update(from webView: WKWebView) {

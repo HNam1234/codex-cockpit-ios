@@ -1,11 +1,13 @@
 import SwiftUI
 
 struct AccountsView: View {
+    @EnvironmentObject private var directory: AccountDirectory
+
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 12) {
-                ForEach(AccountProfile.all) { profile in
-                    NavigationLink(value: profile) {
+                ForEach(directory.profiles) { profile in
+                    NavigationLink(value: ProfileRoute(id: profile.id, action: .web)) {
                         AccountCard(profile: profile)
                     }
                     .buttonStyle(.plain)
@@ -15,9 +17,7 @@ struct AccountsView: View {
         }
         .background(Color(.systemGroupedBackground))
         .navigationTitle("Tài khoản Codex")
-        .navigationDestination(for: AccountProfile.self) { profile in
-            ProfileDetailView(profile: profile)
-        }
+        .refreshable { await directory.refresh() }
     }
 }
 
@@ -28,7 +28,7 @@ private struct AccountCard: View {
         HStack(spacing: 14) {
             ZStack {
                 RoundedRectangle(cornerRadius: 14).fill(profile.tint.opacity(0.15))
-                Text("\(profile.id)").font(.headline).foregroundStyle(profile.tint)
+                Text(profile.id).font(.headline).foregroundStyle(profile.tint)
             }
             .frame(width: 48, height: 48)
 

@@ -1,14 +1,14 @@
 # Codex Cockpit iOS
 
-SwiftUI prototype for iOS 17+ with one dashboard session and five persistent, isolated WebKit profiles.
+SwiftUI app for iOS 17+ with one dashboard session and a dynamic number of persistent, isolated WebKit profiles.
 
 ## Features
 
-- Existing Codex quota dashboard inside the app.
+- Existing Codex quota dashboard inside the app, with direct **Mở Web** and **Nhập device code** actions on every account card.
 - Five independent ChatGPT web sessions backed by fixed `WKWebsiteDataStore` identifiers.
 - Device-code entry opens `auth.openai.com/codex/device` inside the selected profile and attempts to fill the code. The user still confirms on the official OpenAI page.
 - Device code is only copied to the local iPhone clipboard; the app does not upload it.
-- Per-profile clear-session action.
+- Per-profile clear-session action. The original five data-store UUIDs remain unchanged, so installing an update over the existing app with the same Bundle ID preserves their logins.
 - Launches directly into the dashboard; the unstable startup Face ID gate is disabled.
 - Face ID preference uses a namespaced key so re-signing with a reused bundle ID cannot inherit another app's lock state.
 - Only one profile WebView is alive while its screen is open.
@@ -54,7 +54,9 @@ Optionally set repository variable `IOS_BUNDLE_ID`. The provisioning profile mus
 
 ## Dashboard login
 
-The app performs a private `POST /app-login` bootstrap using a revocable token injected from the `COCKPIT_APP_TOKEN` GitHub Actions secret. No Telegram link is required in the app, and the token is never placed in a URL or committed to the repository.
+The app performs a private `POST /app-login` bootstrap using a revocable token injected from the `COCKPIT_APP_TOKEN` GitHub Actions secret. It automatically bootstraps again whenever the dashboard cookie is absent or expired, so no Telegram link or manual dashboard login is required. The token is never placed in a URL or committed to the repository.
+
+The profile list is loaded dynamically from authenticated `POST /app-config`; it is not capped at five accounts. Install upgrades over the existing app with the same Bundle ID and signing team. Changing the Bundle ID or deleting the app creates/removes the iOS sandbox, so WebKit cookies cannot be carried across that boundary.
 
 ## Current validation boundary
 
