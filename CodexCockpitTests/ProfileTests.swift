@@ -8,9 +8,10 @@ final class ProfileTests: XCTestCase {
         XCTAssertFalse(AccountProfile.all.map(\.dataStoreIdentifier).contains(AccountProfile.dashboardDataStoreIdentifier))
     }
 
-    func testDashboardLoginLinkValidation() {
-        XCTAssertTrue(AppURLs.isDashboardLoginLink(URL(string: "https://mach-dns.tail2e377d.ts.net/codex/login?t=abc")!))
-        XCTAssertFalse(AppURLs.isDashboardLoginLink(URL(string: "https://evil.example/codex/login?t=abc")!))
-        XCTAssertFalse(AppURLs.isDashboardLoginLink(URL(string: "http://mach-dns.tail2e377d.ts.net/codex/login?t=abc")!))
+    func testDashboardUsesPrivatePostBootstrap() {
+        XCTAssertEqual(AppURLs.dashboardRequest.url?.host, "mach-dns.tail2e377d.ts.net")
+        XCTAssertEqual(AppURLs.dashboardRequest.url?.path, "/codex/app-login")
+        XCTAssertEqual(AppURLs.dashboardRequest.httpMethod, "POST")
+        XCTAssertNil(AppURLs.dashboardRequest.url?.query)
     }
 }

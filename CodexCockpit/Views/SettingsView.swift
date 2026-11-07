@@ -18,11 +18,11 @@ struct SettingsView: View {
             Section("Dashboard") {
                 Text(AppURLs.dashboard.absoluteString)
                     .font(.caption.monospaced()).textSelection(.enabled)
-                Text("Dashboard chỉ đọc quota. Telegram tiếp tục gửi cảnh báo realtime.")
+                Text("App tự đăng nhập bằng phiên riêng có thể thu hồi. Telegram tiếp tục gửi cảnh báo realtime.")
                     .font(.footnote).foregroundStyle(.secondary)
             }
             Section("Phiên bản") {
-                LabeledContent("Codex Cockpit", value: "1.0.3 (4)")
+                LabeledContent("Codex Cockpit", value: "1.0.4 (5)")
                 if let statusText { Text(statusText).font(.footnote) }
             }
         }

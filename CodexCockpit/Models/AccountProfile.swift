@@ -20,13 +20,17 @@ struct AccountProfile: Identifiable, Hashable {
 
 enum AppURLs {
     static let dashboard = URL(string: "https://mach-dns.tail2e377d.ts.net/codex/")!
+    static let dashboardAppLogin = URL(string: "https://mach-dns.tail2e377d.ts.net/codex/app-login")!
     static let chatGPT = URL(string: "https://chatgpt.com/")!
     static let deviceLogin = URL(string: "https://auth.openai.com/codex/device")!
 
-    static func isDashboardLoginLink(_ url: URL) -> Bool {
-        url.scheme == "https"
-            && url.host == dashboard.host
-            && url.path == "/codex/login"
-            && url.query?.contains("t=") == true
+    static var dashboardRequest: URLRequest {
+        guard !AppAuth.cockpitToken.isEmpty else { return URLRequest(url: dashboard) }
+        var request = URLRequest(url: dashboardAppLogin)
+        request.httpMethod = "POST"
+        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        let encoded = AppAuth.cockpitToken.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        request.httpBody = "k=\(encoded)".data(using: .utf8)
+        return request
     }
 }

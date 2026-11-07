@@ -54,7 +54,7 @@ Optionally set repository variable `IOS_BUNDLE_ID`. The provisioning profile mus
 
 ## Dashboard login
 
-Send `/web` to the Telegram bot, copy the short-lived login URL, then use the link button in the Cockpit tab to paste it once. The dashboard cookie remains in its own isolated WebKit store.
+The app performs a private `POST /app-login` bootstrap using a revocable token injected from the `COCKPIT_APP_TOKEN` GitHub Actions secret. No Telegram link is required in the app, and the token is never placed in a URL or committed to the repository.
 
 ## Current validation boundary
 

@@ -24,6 +24,15 @@ final class BrowserState: ObservableObject {
         }
     }
 
+    func open(_ request: URLRequest) {
+        errorMessage = nil
+        if let webView {
+            webView.load(request)
+        } else if let url = request.url {
+            pendingURL = url
+        }
+    }
+
     func openDeviceLogin(code: String) {
         pendingDeviceCode = code.isEmpty ? nil : code
         open(AppURLs.deviceLogin)
@@ -33,9 +42,13 @@ final class BrowserState: ObservableObject {
     func goForward() { webView?.goForward() }
     func reload() { webView?.reload() }
 
-    func attach(_ webView: WKWebView, initialURL: URL) {
+    func attach(_ webView: WKWebView, initialRequest: URLRequest) {
         self.webView = webView
-        open(pendingURL ?? initialURL)
+        if let pendingURL {
+            open(pendingURL)
+        } else {
+            open(initialRequest)
+        }
         pendingURL = nil
     }
 

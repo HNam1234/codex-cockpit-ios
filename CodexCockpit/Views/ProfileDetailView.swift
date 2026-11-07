@@ -15,7 +15,7 @@ struct ProfileDetailView: View {
             ZStack(alignment: .top) {
                 ProfileWebView(
                     dataStoreIdentifier: profile.dataStoreIdentifier,
-                    initialURL: AppURLs.chatGPT,
+                    initialRequest: URLRequest(url: AppURLs.chatGPT),
                     state: browser
                 )
                 .id(webViewGeneration)

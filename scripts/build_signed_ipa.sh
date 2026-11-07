@@ -9,6 +9,7 @@ BUILD="$ROOT/.build/signed"
 cd "$ROOT"
 command -v xcodegen >/dev/null || brew install xcodegen
 python3 scripts/generate_icon.py
+python3 scripts/generate_app_auth.py
 xcodegen generate
 rm -rf "$BUILD"
 mkdir -p "$BUILD"

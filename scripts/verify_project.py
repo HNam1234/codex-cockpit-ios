@@ -14,6 +14,7 @@ assert len(set(uuids)) == 6
 assert "WKWebsiteDataStore(forIdentifier:" in (root / "CodexCockpit/Services/ProfileDataStore.swift").read_text(encoding="utf-8")
 assert "auth.openai.com/codex/device" in profile_source
 assert "openDeviceLogin" in (root / "CodexCockpit/Web/BrowserState.swift").read_text(encoding="utf-8")
+assert "/codex/app-login" in profile_source
 
 for path in (root / "CodexCockpit/Assets.xcassets").rglob("Contents.json"):
     json.loads(path.read_text(encoding="utf-8"))

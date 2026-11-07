@@ -4,7 +4,7 @@ import WebKit
 
 struct ProfileWebView: UIViewRepresentable {
     let dataStoreIdentifier: UUID
-    let initialURL: URL
+    let initialRequest: URLRequest
     @ObservedObject var state: BrowserState
 
     func makeCoordinator() -> Coordinator { Coordinator(state: state) }
@@ -24,7 +24,7 @@ struct ProfileWebView: UIViewRepresentable {
         webView.scrollView.keyboardDismissMode = .interactive
 
         context.coordinator.observe(webView)
-        state.attach(webView, initialURL: initialURL)
+        state.attach(webView, initialRequest: initialRequest)
         return webView
     }
 

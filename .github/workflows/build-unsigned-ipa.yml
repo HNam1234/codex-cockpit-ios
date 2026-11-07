@@ -13,8 +13,11 @@ jobs:
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Generate Xcode project
+        env:
+          COCKPIT_APP_TOKEN: ${{ secrets.COCKPIT_APP_TOKEN }}
         run: |
           python3 scripts/generate_icon.py
+          python3 scripts/generate_app_auth.py
           xcodegen generate
       - name: UI smoke test on iOS Simulator
         run: |
