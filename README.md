@@ -10,6 +10,7 @@ SwiftUI prototype for iOS 17+ with one dashboard session and five persistent, is
 - Device code is only copied to the local iPhone clipboard; the app does not upload it.
 - Per-profile clear-session action.
 - Optional Face ID/device-passcode lock.
+- Face ID preference uses a namespaced key so re-signing with a reused bundle ID cannot inherit another app's lock state.
 - Only one profile WebView is alive while its screen is open.
 
 ## Generate and run

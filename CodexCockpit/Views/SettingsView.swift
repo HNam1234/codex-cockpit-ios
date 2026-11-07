@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @AppStorage("faceIDEnabled") private var faceIDEnabled = false
+    @AppStorage(AppLockKeys.faceIDEnabled) private var faceIDEnabled = false
     @State private var statusText: String?
 
     var body: some View {
@@ -23,7 +23,7 @@ struct SettingsView: View {
                     .font(.footnote).foregroundStyle(.secondary)
             }
             Section("Phiên bản") {
-                LabeledContent("Codex Cockpit", value: "1.0.0 (1)")
+                LabeledContent("Codex Cockpit", value: "1.0.1 (2)")
                 if let statusText { Text(statusText).font(.footnote) }
             }
         }

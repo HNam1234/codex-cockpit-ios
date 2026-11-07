@@ -1,15 +1,21 @@
 import Foundation
 import LocalAuthentication
 
+enum AppLockKeys {
+    // Namespaced and versioned so an app previously installed with the same
+    // signing bundle ID cannot accidentally enable Codex Cockpit's lock.
+    static let faceIDEnabled = "vn.nam.CodexCockpit.faceIDEnabled.v2"
+}
+
 @MainActor
 final class AppLockModel: ObservableObject {
     @Published private(set) var isUnlocked = false
     @Published private(set) var errorMessage: String?
 
     var isEnabled: Bool {
-        get { UserDefaults.standard.bool(forKey: "faceIDEnabled") }
+        get { UserDefaults.standard.bool(forKey: AppLockKeys.faceIDEnabled) }
         set {
-            UserDefaults.standard.set(newValue, forKey: "faceIDEnabled")
+            UserDefaults.standard.set(newValue, forKey: AppLockKeys.faceIDEnabled)
             if !newValue { isUnlocked = true }
         }
     }
