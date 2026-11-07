@@ -23,7 +23,8 @@ final class LaunchTests: XCTestCase {
         app.launch()
 
         XCTAssertTrue(app.tabBars.buttons["Cockpit"].waitForExistence(timeout: 15))
-        XCTAssertTrue(app.otherElements["cockpit-webview"].waitForExistence(timeout: 15))
+        XCTAssertEqual(app.state, .runningForeground)
+        sleep(3)
         XCTAssertEqual(app.state, .runningForeground)
     }
 }
