@@ -1,0 +1,107 @@
+import Foundation
+
+@MainActor
+final class CockpitStore: ObservableObject {
+    @Published private(set) var accounts: [AccountSnapshot] = []
+    @Published private(set) var capabilities: AppCapabilities?
+    @Published private(set) var tiboReset: TiboResetStatus?
+    @Published private(set) var updatedAt: Int = 0
+    @Published private(set) var isLoading = false
+    @Published private(set) var busyAccounts: Set<String> = []
+    @Published private(set) var loginSessions: [String: LoginSession] = [:]
+    @Published var errorMessage: String?
+
+    private let api = CockpitAPI.shared
+    private var loginTasks: [String: Task<Void, Never>] = [:]
+
+    func account(id: String) -> AccountSnapshot? {
+        accounts.first(where: { $0.id == id })
+    }
+
+    func load() async {
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            let response = try await api.status()
+            accounts = response.accounts
+            capabilities = response.capabilities
+            tiboReset = response.tiboReset
+            updatedAt = response.updatedAt
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func refresh(accountID: String) async {
+        busyAccounts.insert(accountID)
+        defer { busyAccounts.remove(accountID) }
+        do {
+            replace(try await api.refresh(accountID: accountID))
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func beginReauthorization(accountID: String) async {
+        busyAccounts.insert(accountID)
+        defer { busyAccounts.remove(accountID) }
+        do {
+            let session = try await api.startAuthorization(accountID: accountID)
+            loginSessions[accountID] = session
+            errorMessage = nil
+            startPolling(accountID: accountID, sessionID: session.sessionID)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func consumeResetCredit(accountID: String) async -> String? {
+        busyAccounts.insert(accountID)
+        defer { busyAccounts.remove(accountID) }
+        do {
+            let result = try await api.consumeResetCredit(
+                accountID: accountID,
+                idempotencyKey: UUID().uuidString
+            )
+            replace(result.account)
+            errorMessage = nil
+            return result.outcome
+        } catch {
+            errorMessage = error.localizedDescription
+            return nil
+        }
+    }
+
+    private func startPolling(accountID: String, sessionID: String) {
+        loginTasks[accountID]?.cancel()
+        loginTasks[accountID] = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(2))
+                guard let self else { return }
+                do {
+                    let session = try await self.api.authorizationStatus(sessionID: sessionID)
+                    self.loginSessions[accountID] = session
+                    if session.status == "succeeded" {
+                        if let account = session.account { self.replace(account) }
+                        return
+                    }
+                    if session.status == "failed" { return }
+                } catch {
+                    self.errorMessage = error.localizedDescription
+                    return
+                }
+            }
+        }
+    }
+
+    private func replace(_ account: AccountSnapshot) {
+        if let index = accounts.firstIndex(where: { $0.id == account.id }) {
+            accounts[index] = account
+        } else {
+            accounts.append(account)
+        }
+        updatedAt = max(updatedAt, account.checkedAt)
+    }
+}

@@ -2,10 +2,10 @@ import CryptoKit
 import Foundation
 import SwiftUI
 
-struct AccountProfile: Identifiable, Hashable, Codable {
+struct WebProfile: Identifiable, Hashable, Codable {
     let id: String
-    let name: String
 
+    var name: String { "WebKit \(id)" }
     var dataStoreIdentifier: UUID { Self.persistentIdentifier(for: id) }
 
     var tint: Color {
@@ -14,14 +14,8 @@ struct AccountProfile: Identifiable, Hashable, Codable {
         return palette[Int(total % UInt64(palette.count))]
     }
 
-    static let dashboardDataStoreIdentifier = UUID(uuidString: "C0D3C000-0000-4000-8000-000000000000")!
-
-    static let fallback: [AccountProfile] = (1...5).map {
-        .init(id: String($0), name: "Codex \($0)")
-    }
-
     static func persistentIdentifier(for id: String) -> UUID {
-        // Preserve the original five stores so upgrades keep their existing cookies.
+        // These five identifiers shipped in 1.0.x. Never change them: they own the existing cookies.
         if let number = Int(id), (1...5).contains(number) {
             return UUID(uuidString: String(format: "C0D3C%03d-0000-4000-8000-%012d", number, number))!
         }
@@ -32,106 +26,218 @@ struct AccountProfile: Identifiable, Hashable, Codable {
     }
 }
 
-enum ProfileAction: String, Hashable {
+struct QuotaWindow: Decodable, Hashable, Identifiable {
+    let label: String
+    let remainingPercent: Double
+    let usedPercent: Double
+    let resetsAt: Int
+    let windowMinutes: Int
+
+    var id: String { "\(label)-\(windowMinutes)-\(resetsAt)" }
+
+    enum CodingKeys: String, CodingKey {
+        case label
+        case remainingPercent = "remaining_percent"
+        case usedPercent = "used_percent"
+        case resetsAt = "resets_at"
+        case windowMinutes = "window_minutes"
+    }
+}
+
+struct TiboResetStatus: Decodable, Hashable {
+    let status: String
+    let kind: String?
+    let message: String
+    let latestAt: String?
+    let pendingAt: String?
+    let fetchedAt: Int
+    let source: String
+    let stale: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case status, kind, message, source, stale
+        case latestAt = "latest_at"
+        case pendingAt = "pending_at"
+        case fetchedAt = "fetched_at"
+    }
+}
+
+struct AccountSnapshot: Decodable, Identifiable, Hashable {
+    let id: String
+    let name: String
+    let displayName: String?
+    let email: String?
+    let plan: String?
+    let ok: Bool
+    let error: String?
+    let windows: [QuotaWindow]
+    let resetCredits: Int
+    let checkedAt: Int
+
+    var identity: String { displayName ?? email ?? name }
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, email, plan, ok, error, windows
+        case displayName = "display_name"
+        case resetCredits = "reset_credits"
+        case checkedAt = "checked_at"
+    }
+}
+
+struct AppCapabilities: Decodable, Hashable {
+    let reauthorize: Bool
+    let refreshUsage: Bool
+    let resetCredit: Bool
+    let dynamicProfiles: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case reauthorize
+        case refreshUsage = "refresh_usage"
+        case resetCredit = "reset_credit"
+        case dynamicProfiles = "dynamic_profiles"
+    }
+}
+
+struct NativeStatusResponse: Decodable {
+    let generatedAt: Int
+    let updatedAt: Int
+    let pollSeconds: Int
+    let capabilities: AppCapabilities
+    let tiboReset: TiboResetStatus?
+    let accounts: [AccountSnapshot]
+
+    enum CodingKeys: String, CodingKey {
+        case accounts, capabilities
+        case tiboReset = "tibo_reset"
+        case generatedAt = "generated_at"
+        case updatedAt = "updated_at"
+        case pollSeconds = "poll_seconds"
+    }
+}
+
+struct LoginSession: Decodable, Hashable {
+    let sessionID: String
+    let accountID: String
+    let status: String
+    let verificationURL: String?
+    let userCode: String?
+    let expiresAt: Int
+    let error: String?
+    let account: AccountSnapshot?
+
+    enum CodingKeys: String, CodingKey {
+        case status, error, account
+        case sessionID = "session_id"
+        case accountID = "account_id"
+        case verificationURL = "verification_url"
+        case userCode = "user_code"
+        case expiresAt = "expires_at"
+    }
+}
+
+enum BrowserMode: String, Hashable {
     case web
     case device
 }
 
-struct ProfileRoute: Hashable {
-    let id: String
-    let action: ProfileAction
+struct BrowserLaunch: Hashable {
+    let mode: BrowserMode
+    let code: String?
+    let verificationURL: String?
+
+    static let web = BrowserLaunch(mode: .web, code: nil, verificationURL: nil)
+}
+
+enum AppRoute: Hashable {
+    case accountDetail(String)
+    case browser(String, BrowserLaunch)
 }
 
 enum AppTab: Hashable {
     case cockpit
-    case accounts
+    case profiles
     case settings
 }
 
 @MainActor
 final class AppRouter: ObservableObject {
     @Published var selectedTab: AppTab = .cockpit
-    @Published var accountPath = NavigationPath()
+    @Published var cockpitPath = NavigationPath()
+    @Published var profilePath = NavigationPath()
 
-    func open(_ route: ProfileRoute) {
-        accountPath = NavigationPath()
-        accountPath.append(route)
-        selectedTab = .accounts
+    func showAccount(_ accountID: String) {
+        cockpitPath.append(AppRoute.accountDetail(accountID))
+    }
+
+    func openBrowser(accountID: String, launch: BrowserLaunch = .web) {
+        cockpitPath.append(AppRoute.browser(accountID, launch))
     }
 }
 
 @MainActor
-final class AccountDirectory: ObservableObject {
-    @Published private(set) var profiles: [AccountProfile]
-    private let cacheKey = "CodexCockpit.accountProfiles.v2"
+final class ProfileMappingStore: ObservableObject {
+    @Published private(set) var mappings: [String: String]
+    @Published private(set) var profiles: [WebProfile]
+
+    private let mappingKey = "CodexCockpit.profileMappings.v1"
+    private let countKey = "CodexCockpit.profileCount.v1"
 
     init() {
-        if let data = UserDefaults.standard.data(forKey: cacheKey),
-           let cached = try? JSONDecoder().decode([AccountProfile].self, from: data),
-           !cached.isEmpty {
-            profiles = cached
-        } else {
-            profiles = AccountProfile.fallback
-        }
+        mappings = UserDefaults.standard.dictionary(forKey: mappingKey) as? [String: String] ?? [:]
+        let count = max(5, UserDefaults.standard.integer(forKey: countKey))
+        profiles = (1...count).map { WebProfile(id: String($0)) }
     }
 
-    func profile(id: String) -> AccountProfile {
-        profiles.first(where: { $0.id == id }) ?? .init(id: id, name: "Codex \(id)")
-    }
-
-    func refresh() async {
-        guard !AppAuth.cockpitToken.isEmpty else { return }
-        do {
-            let (data, response) = try await URLSession.shared.data(for: AppURLs.accountConfigRequest)
-            guard (response as? HTTPURLResponse)?.statusCode == 200 else { return }
-            let decoded = try JSONDecoder().decode(AccountConfigResponse.self, from: data)
-            var seen = Set<String>()
-            let unique = decoded.accounts.filter { !$0.id.isEmpty && seen.insert($0.id).inserted }
-            guard !unique.isEmpty else { return }
-            profiles = unique
-            if let cached = try? JSONEncoder().encode(unique) {
-                UserDefaults.standard.set(cached, forKey: cacheKey)
+    func synchronize(accounts: [AccountSnapshot]) {
+        while profiles.count < max(5, accounts.count) { addProfile(save: false) }
+        var used = Set(mappings.values)
+        for account in accounts where mappings[account.id] == nil {
+            let preferred = profiles.first(where: { $0.id == account.id && !used.contains($0.id) })
+            let available = preferred ?? profiles.first(where: { !used.contains($0.id) })
+            if let available {
+                mappings[account.id] = available.id
+                used.insert(available.id)
             }
-        } catch {
-            // Keep the last known profile list when the VPS is temporarily unavailable.
         }
+        save()
     }
-}
 
-private struct AccountConfigResponse: Decodable {
-    let accounts: [AccountProfile]
+    func profile(for accountID: String) -> WebProfile {
+        let profileID = mappings[accountID] ?? accountID
+        return profiles.first(where: { $0.id == profileID }) ?? WebProfile(id: profileID)
+    }
+
+    func mappedAccountID(for profileID: String) -> String? {
+        mappings.first(where: { $0.value == profileID })?.key
+    }
+
+    func assign(accountID: String, to profileID: String) {
+        let oldProfile = mappings[accountID]
+        if let other = mappings.first(where: { $0.key != accountID && $0.value == profileID })?.key {
+            if let oldProfile { mappings[other] = oldProfile } else { mappings.removeValue(forKey: other) }
+        }
+        mappings[accountID] = profileID
+        save()
+    }
+
+    func addProfile(save shouldSave: Bool = true) {
+        let next = (profiles.compactMap { Int($0.id) }.max() ?? 0) + 1
+        profiles.append(WebProfile(id: String(next)))
+        if shouldSave { save() }
+    }
+
+    private func save() {
+        UserDefaults.standard.set(mappings, forKey: mappingKey)
+        UserDefaults.standard.set(profiles.count, forKey: countKey)
+    }
 }
 
 enum AppURLs {
-    static let dashboard = URL(string: "https://mach-dns.tail2e377d.ts.net/codex/")!
-    static let dashboardAppLogin = URL(string: "https://mach-dns.tail2e377d.ts.net/codex/app-login")!
-    static let accountConfig = URL(string: "https://mach-dns.tail2e377d.ts.net/codex/app-config")!
+    static let base = URL(string: "https://mach-dns.tail2e377d.ts.net/codex/")!
     static let chatGPT = URL(string: "https://chatgpt.com/")!
     static let deviceLogin = URL(string: "https://auth.openai.com/codex/device")!
 
-    static var dashboardRequest: URLRequest { tokenRequest(url: dashboardAppLogin) }
-    static var accountConfigRequest: URLRequest { tokenRequest(url: accountConfig) }
-
-    static func profileRoute(from url: URL) -> ProfileRoute? {
-        guard url.host == dashboard.host,
-              url.path == "/codex/app/profile",
-              let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-              let id = components.queryItems?.first(where: { $0.name == "id" })?.value,
-              !id.isEmpty,
-              let actionValue = components.queryItems?.first(where: { $0.name == "action" })?.value,
-              let action = ProfileAction(rawValue: actionValue) else { return nil }
-        return ProfileRoute(id: id, action: action)
-    }
-
-    private static func tokenRequest(url: URL) -> URLRequest {
-        guard !AppAuth.cockpitToken.isEmpty else { return URLRequest(url: url) }
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        var allowed = CharacterSet.alphanumerics
-        allowed.insert(charactersIn: "-._~")
-        let encoded = AppAuth.cockpitToken.addingPercentEncoding(withAllowedCharacters: allowed) ?? ""
-        request.httpBody = "k=\(encoded)".data(using: .utf8)
-        return request
+    static func endpoint(_ path: String) -> URL {
+        URL(string: path, relativeTo: base)!.absoluteURL
     }
 }

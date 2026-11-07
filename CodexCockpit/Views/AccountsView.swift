@@ -1,47 +1,44 @@
 import SwiftUI
 
 struct AccountsView: View {
-    @EnvironmentObject private var directory: AccountDirectory
+    @EnvironmentObject private var store: CockpitStore
+    @EnvironmentObject private var mappings: ProfileMappingStore
+    @EnvironmentObject private var router: AppRouter
 
     var body: some View {
-        ScrollView {
-            LazyVStack(spacing: 12) {
-                ForEach(directory.profiles) { profile in
-                    NavigationLink(value: ProfileRoute(id: profile.id, action: .web)) {
-                        AccountCard(profile: profile)
+        List {
+            Section {
+                Text("Mỗi WebKit là một kho cookie riêng. Đổi mapping chỉ đổi tài khoản Codex nào mở profile đó; không xóa phiên ChatGPT.")
+                    .font(.footnote).foregroundStyle(.secondary)
+            }
+            ForEach(mappings.profiles) { profile in
+                let account = store.accounts.first(where: { $0.id == mappings.mappedAccountID(for: profile.id) })
+                Button {
+                    if let account { router.profilePath.append(AppRoute.accountDetail(account.id)) }
+                } label: {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 12).fill(profile.tint.opacity(0.14))
+                            Text(profile.id).font(.headline).foregroundStyle(profile.tint)
+                        }
+                        .frame(width: 44, height: 44)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(profile.name).font(.headline).foregroundStyle(.primary)
+                            Text(account?.identity ?? "Chưa gán tài khoản")
+                                .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                        }
+                        Spacer()
+                        if account != nil { Image(systemName: "chevron.right").foregroundStyle(.tertiary) }
                     }
-                    .buttonStyle(.plain)
                 }
+                .disabled(account == nil)
             }
-            .padding()
         }
-        .background(Color(.systemGroupedBackground))
-        .navigationTitle("Tài khoản Codex")
-        .refreshable { await directory.refresh() }
-    }
-}
-
-private struct AccountCard: View {
-    let profile: AccountProfile
-
-    var body: some View {
-        HStack(spacing: 14) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 14).fill(profile.tint.opacity(0.15))
-                Text(profile.id).font(.headline).foregroundStyle(profile.tint)
+        .navigationTitle("WebKit Profiles")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { mappings.addProfile() } label: { Image(systemName: "plus") }
             }
-            .frame(width: 48, height: 48)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(profile.name).font(.headline)
-                Text("Profile WebKit riêng · giữ session độc lập")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
-            Spacer()
-            Image(systemName: "chevron.right").foregroundStyle(.tertiary)
         }
-        .padding(14)
-        .background(.background, in: RoundedRectangle(cornerRadius: 18))
-        .overlay(RoundedRectangle(cornerRadius: 18).stroke(.separator.opacity(0.35)))
     }
 }

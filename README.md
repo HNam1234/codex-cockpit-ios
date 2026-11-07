@@ -1,11 +1,15 @@
 # Codex Cockpit iOS
 
-SwiftUI app for iOS 17+ with one dashboard session and a dynamic number of persistent, isolated WebKit profiles.
+SwiftUI app for iOS 17+ with a native quota dashboard and a dynamic number of persistent, isolated WebKit profiles.
 
 ## Features
 
-- Existing Codex quota dashboard inside the app, with direct **Mở Web** and **Nhập device code** actions on every account card.
-- Five independent ChatGPT web sessions backed by fixed `WKWebsiteDataStore` identifiers.
+- Compact native overview with correct remaining-quota progress bars; tap an account for full reset times and actions.
+- Dynamic account count and dynamic independent ChatGPT sessions backed by persistent `WKWebsiteDataStore` identifiers.
+- Change account-to-WebKit mapping at any time. If a profile is already assigned, the app swaps mappings without clearing cookies.
+- Reauthorize a revoked Codex account through the VPS device-login flow, then confirm inside the account's mapped WebKit.
+- Refresh usage and consume a real reset credit from the native account screen when the Codex account exposes one.
+- One global TIBO reset banner fetched by the VPS from the public OpenTheRank tracker every 15 minutes. No account data is sent to TIBO or OpenTheRank.
 - Device-code entry opens `auth.openai.com/codex/device` inside the selected profile and attempts to fill the code. The user still confirms on the official OpenAI page.
 - Device code is only copied to the local iPhone clipboard; the app does not upload it.
 - Per-profile clear-session action. The original five data-store UUIDs remain unchanged, so installing an update over the existing app with the same Bundle ID preserves their logins.
@@ -52,12 +56,12 @@ The `build-signed-ipa.yml` workflow builds on a macOS GitHub runner. Use a **pri
 
 Optionally set repository variable `IOS_BUNDLE_ID`. The provisioning profile must match that bundle ID and include the target iPhone UDID for Ad Hoc/development installation.
 
-## Dashboard login
+## Native dashboard authentication
 
-The app performs a private `POST /app-login` bootstrap using a revocable token injected from the `COCKPIT_APP_TOKEN` GitHub Actions secret. It automatically bootstraps again whenever the dashboard cookie is absent or expired, so no Telegram link or manual dashboard login is required. The token is never placed in a URL or committed to the repository.
+The app calls private native JSON endpoints using a revocable token injected from the `COCKPIT_APP_TOKEN` GitHub Actions secret. The token is posted in the request body, never placed in a URL or committed to the repository.
 
-The profile list is loaded dynamically from authenticated `POST /app-config`; it is not capped at five accounts. Install upgrades over the existing app with the same Bundle ID and signing team. Changing the Bundle ID or deleting the app creates/removes the iOS sandbox, so WebKit cookies cannot be carried across that boundary.
+The account list is loaded dynamically and is not capped at five. Install upgrades over the existing app with the same Bundle ID and signing team. Changing the Bundle ID or deleting the app creates/removes the iOS sandbox, so WebKit cookies cannot be carried across that boundary.
 
 ## Current validation boundary
 
-The repository includes static checks and Xcode unit tests, but this Windows machine cannot compile an iOS binary. The first device build must verify that the selected ChatGPT sign-in method works inside `WKWebView`; third-party SSO providers may choose to redirect outside embedded web views.
+The private macOS CI workflow builds the IPA and runs the Xcode unit/UI tests. Device-login confirmation still happens on the official OpenAI page; third-party SSO providers may choose to redirect outside embedded web views.
