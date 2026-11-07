@@ -29,7 +29,7 @@ struct RootView: View {
                 .tabItem { Label("Cài đặt", systemImage: "gearshape.fill") }
                 .tag(AppTab.settings)
         }
-        .tint(.blue)
+        .tint(CockpitTheme.accent)
         .environmentObject(router)
         .environmentObject(store)
         .environmentObject(mappings)

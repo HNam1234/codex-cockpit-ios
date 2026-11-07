@@ -5,27 +5,51 @@ struct SettingsView: View {
     @EnvironmentObject private var mappings: ProfileMappingStore
 
     var body: some View {
-        Form {
-            Section("Bảo mật") {
-                Label("Dashboard native dùng token có thể thu hồi", systemImage: "lock.shield.fill")
-                Text("Cookie của từng profile nằm trong sandbox WebKit trên iPhone; app không đọc hoặc gửi cookie lên VPS.")
-                    .font(.footnote).foregroundStyle(.secondary)
-            }
-            Section("Profile") {
-                LabeledContent("Tài khoản Codex", value: "\(store.accounts.count)")
-                LabeledContent("WebKit profiles", value: "\(mappings.profiles.count)")
-                LabeledContent("Kho dữ liệu", value: "Persistent, tách biệt")
-                LabeledContent("iOS tối thiểu", value: "17.0")
-            }
-            Section("TIBO") {
-                Text("VPS chỉ đọc feed reset công khai từ OpenTheRank mỗi 15 phút. Không quota, email, token hoặc dữ liệu tài khoản nào được gửi cho TIBO.")
-                    .font(.footnote).foregroundStyle(.secondary)
-            }
-            Section("Phiên bản") {
-                LabeledContent("Codex Cockpit", value: "1.2.0 (7)")
+        ZStack {
+            CockpitBackdrop()
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 18) {
+                    VStack(spacing: 10) {
+                        ProfileArtwork(seed: "settings", symbol: "command", size: 92)
+                        Text("Codex Cockpit").font(.title.weight(.bold))
+                        Text("1.2.1 · Premium quota control").font(.subheadline).foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 8)
+
+                    settingsCard("Thư viện", icon: "square.stack.3d.up.fill", tint: CockpitTheme.violet) {
+                        LabeledContent("Tài khoản Codex", value: "\(store.accounts.count)")
+                        Divider()
+                        LabeledContent("WebKit profiles", value: "\(mappings.profiles.count)")
+                        Divider()
+                        LabeledContent("Kho dữ liệu", value: "Persistent")
+                    }
+                    settingsCard("Riêng tư", icon: "lock.shield.fill", tint: .green) {
+                        Text("Cookie nằm trong sandbox WebKit trên iPhone. App không đọc hoặc gửi cookie lên VPS.")
+                            .font(.subheadline).foregroundStyle(.secondary)
+                    }
+                    settingsCard("TIBO", icon: "waveform.path.ecg", tint: CockpitTheme.accent) {
+                        Text("VPS chỉ đọc feed reset công khai mỗi 15 phút. Không quota, email hoặc token tài khoản nào được gửi cho TIBO.")
+                            .font(.subheadline).foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.horizontal, 16).padding(.bottom, 28)
             }
         }
-        .navigationTitle("Cài đặt")
+        .toolbarBackground(.hidden, for: .navigationBar)
+    }
+
+    private func settingsCard<Content: View>(
+        _ title: String,
+        icon: String,
+        tint: Color,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 13) {
+            Label(title, systemImage: icon).font(.headline).foregroundStyle(tint)
+            content()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(18).glassCard()
     }
 }
 

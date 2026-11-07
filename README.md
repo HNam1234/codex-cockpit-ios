@@ -4,6 +4,7 @@ SwiftUI app for iOS 17+ with a native quota dashboard and a dynamic number of pe
 
 ## Features
 
+- Soor/Apple Music-inspired native visual system: editorial gradients, artwork-style account identities, adaptive materials, large type, horizontal account shelf, and compact one-hand navigation.
 - Compact native overview with correct remaining-quota progress bars; tap an account for full reset times and actions.
 - Dynamic account count and dynamic independent ChatGPT sessions backed by persistent `WKWebsiteDataStore` identifiers.
 - Change account-to-WebKit mapping at any time. If a profile is already assigned, the app swaps mappings without clearing cookies.
