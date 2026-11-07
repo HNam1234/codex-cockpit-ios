@@ -6,11 +6,16 @@ struct CockpitView: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-            ProfileWebView(
-                dataStoreIdentifier: AccountProfile.dashboardDataStoreIdentifier,
-                initialURL: AppURLs.dashboard,
-                state: browser
-            )
+            if ProcessInfo.processInfo.environment["UITEST_MODE"] == "1" {
+                Text("Cockpit ready")
+                    .accessibilityIdentifier("cockpit-ready")
+            } else {
+                ProfileWebView(
+                    dataStoreIdentifier: AccountProfile.dashboardDataStoreIdentifier,
+                    initialURL: AppURLs.dashboard,
+                    state: browser
+                )
+            }
 
             if browser.isLoading {
                 ProgressView(value: browser.progress)

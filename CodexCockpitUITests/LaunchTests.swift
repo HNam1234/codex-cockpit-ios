@@ -7,8 +7,10 @@ final class LaunchTests: XCTestCase {
 
     func testLaunchesDirectlyIntoMainTabsWithoutLockScreen() {
         let app = XCUIApplication()
+        app.launchEnvironment["UITEST_MODE"] = "1"
         app.launch()
 
+        XCTAssertTrue(app.staticTexts["cockpit-ready"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.tabBars.buttons["Cockpit"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.tabBars.buttons["5 tài khoản"].exists)
         XCTAssertTrue(app.tabBars.buttons["Cài đặt"].exists)
