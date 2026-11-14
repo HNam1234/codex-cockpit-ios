@@ -1,6 +1,7 @@
 import XCTest
 @testable import CodexCockpit
 
+@MainActor
 final class CockpitOAuthRelayTests: XCTestCase {
     private let directAuthorizeURL = "https://auth.openai.com/oauth/authorize?response_type=code&client_id=app_test&redirect_uri=http%3A%2F%2Flocalhost%3A1455%2Fauth%2Fcallback&state=state-123&code_challenge=challenge-123&code_challenge_method=S256"
 
@@ -141,6 +142,58 @@ final class CockpitOAuthRelayTests: XCTestCase {
             XCTAssertFalse(error.localizationKey.contains("authorization-code"))
             XCTAssertFalse(error.localizationKey.contains("state-12"))
         }
+    }
+
+    func testBrowserStatePreparesAndCapturesCockpitOAuth() throws {
+        let attempt = try CockpitOAuthRelay.prepare(directAuthorizeURL)
+        let callbackURL = try XCTUnwrap(
+            URL(string: "http://localhost:1455/auth/callback?code=authorization-code&state=state-123")
+        )
+        let browser = BrowserState()
+
+        browser.prepareCockpitOAuth(attempt)
+
+        XCTAssertEqual(browser.cockpitOAuthAttempt, attempt)
+        XCTAssertNil(browser.capturedCockpitOAuthCallback)
+        XCTAssertEqual(browser.pendingRequest?.url, attempt.authorizationURL)
+        XCTAssertTrue(browser.handleCockpitOAuthNavigation(callbackURL))
+        XCTAssertNil(browser.cockpitOAuthAttempt)
+        XCTAssertEqual(browser.capturedCockpitOAuthCallback?.url, callbackURL)
+        XCTAssertNil(browser.errorMessage)
+    }
+
+    func testBrowserStateCancelsMismatchButKeepsAttemptRetryable() throws {
+        let attempt = try CockpitOAuthRelay.prepare(directAuthorizeURL)
+        let wrongStateURL = try XCTUnwrap(
+            URL(string: "http://localhost:1455/auth/callback?code=authorization-code&state=state-124")
+        )
+        let browser = BrowserState()
+        browser.prepareCockpitOAuth(attempt)
+
+        XCTAssertTrue(browser.handleCockpitOAuthNavigation(wrongStateURL))
+        XCTAssertEqual(browser.cockpitOAuthAttempt, attempt)
+        XCTAssertNil(browser.capturedCockpitOAuthCallback)
+        XCTAssertEqual(browser.errorMessage, CockpitOAuthRelayError.stateMismatch.localizationKey)
+    }
+
+    func testBrowserStateAllowsOrdinaryNavigationAndCanClearOAuthState() throws {
+        let attempt = try CockpitOAuthRelay.prepare(directAuthorizeURL)
+        let ordinaryURL = try XCTUnwrap(URL(string: "https://auth.openai.com/account/select"))
+        let callbackURL = try XCTUnwrap(
+            URL(string: "http://localhost:1455/auth/callback?code=authorization-code&state=state-123")
+        )
+        let browser = BrowserState()
+        browser.prepareCockpitOAuth(attempt)
+
+        XCTAssertFalse(browser.handleCockpitOAuthNavigation(ordinaryURL))
+        XCTAssertEqual(browser.cockpitOAuthAttempt, attempt)
+
+        XCTAssertTrue(browser.handleCockpitOAuthNavigation(callbackURL))
+        browser.clearCockpitOAuth()
+
+        XCTAssertNil(browser.cockpitOAuthAttempt)
+        XCTAssertNil(browser.capturedCockpitOAuthCallback)
+        XCTAssertNil(browser.errorMessage)
     }
 
     private func makeHostedURL(authorizeURL: String) throws -> URL {
