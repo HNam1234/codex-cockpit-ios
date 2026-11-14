@@ -6,7 +6,6 @@ struct AccountDetailView: View {
     @EnvironmentObject private var store: CockpitStore
     @EnvironmentObject private var mappings: ProfileMappingStore
     @EnvironmentObject private var router: AppRouter
-    @State private var showingMapping = false
     @State private var confirmingReset = false
     @State private var resetMessage: String?
 
@@ -38,7 +37,6 @@ struct AccountDetailView: View {
         .navigationTitle("Chi tiết")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.hidden, for: .navigationBar)
-        .sheet(isPresented: $showingMapping) { MappingPicker(accountID: accountID) }
         .confirmationDialog("Dùng một reset credit cho tài khoản này?", isPresented: $confirmingReset) {
             Button("Xác nhận reset", role: .destructive) {
                 Task {
@@ -60,6 +58,18 @@ struct AccountDetailView: View {
                 Text(mappings.displayIdentity(for: account)).font(.title2.weight(.bold)).lineLimit(1)
                 Text([account.name, account.plan?.uppercased()].compactMap { $0 }.joined(separator: " · "))
                     .font(.subheadline.weight(.medium)).foregroundStyle(.secondary)
+                if let remaining = account.subscriptionRemainingText() {
+                    HStack(spacing: 6) {
+                        Label(remaining, systemImage: "calendar.badge.clock")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(account.subscriptionIsExpired() ? .red : CockpitTheme.violet)
+                        if let expiration = account.subscriptionExpirationDate {
+                            Text("· hết hạn \(expiration.formatted(date: .numeric, time: .omitted))")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
             }
             if let error = account.error, !account.ok {
                 Label(error, systemImage: "exclamationmark.triangle.fill").font(.caption).foregroundStyle(.red)
@@ -83,10 +93,10 @@ struct AccountDetailView: View {
                 ProfileArtwork(seed: mappings.profile(for: accountID).id, symbol: "safari.fill", size: 48)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(mappings.profile(for: accountID).name).font(.headline)
-                    Text("Cookie được giữ khi đổi mapping").font(.caption).foregroundStyle(.secondary)
+                    Text("WebKit riêng cố định cho account này").font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
-                Button("Đổi") { showingMapping = true }.font(.subheadline.weight(.bold))
+                Image(systemName: "lock.fill").foregroundStyle(.secondary)
             }
             Button { router.openBrowser(accountID: accountID) } label: {
                 Label("Mở Web", systemImage: "safari.fill")
@@ -103,10 +113,10 @@ struct AccountDetailView: View {
                 actionTile("Cập nhật", icon: "arrow.clockwise", tint: .blue) {
                     Task { await store.refresh(accountID: accountID) }
                 }
-                actionTile("Ủy quyền lại", icon: "key.horizontal.fill", tint: CockpitTheme.violet) {
+                actionTile("Device code", icon: "key.horizontal.fill", tint: CockpitTheme.violet) {
                     Task {
-                        await store.beginReauthorization(accountID: accountID)
-                        if let session = store.loginSessions[accountID], let code = session.userCode {
+                        if let session = await store.beginReauthorization(accountID: accountID),
+                           let code = session.userCode {
                             router.openBrowser(
                                 accountID: accountID,
                                 launch: BrowserLaunch(mode: .device, code: code, verificationURL: session.verificationURL)
@@ -166,43 +176,6 @@ private struct AuthorizationStatusCard: View {
             if let error = session.error { Text(error).foregroundStyle(.red) }
         }
         .padding(18).glassCard()
-    }
-}
-
-private struct MappingPicker: View {
-    let accountID: String
-    @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var mappings: ProfileMappingStore
-    @EnvironmentObject private var store: CockpitStore
-
-    var body: some View {
-        NavigationStack {
-            List(mappings.profiles) { profile in
-                let ownerID = mappings.mappedAccountID(for: profile.id)
-                let owner = ownerID.flatMap { store.account(id: $0) }
-                Button {
-                    mappings.assign(accountID: accountID, to: profile.id)
-                    dismiss()
-                } label: {
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text(profile.name).foregroundStyle(.primary)
-                            Text(owner.map { mappings.displayIdentity(for: $0) } ?? "Trống")
-                                .font(.caption).foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        if mappings.profile(for: accountID).id == profile.id {
-                            Image(systemName: "checkmark.circle.fill").foregroundStyle(.blue)
-                        }
-                    }
-                }
-            }
-            .navigationTitle("Chọn WebKit")
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) { Button("Đóng") { dismiss() } }
-                ToolbarItem(placement: .topBarTrailing) { Button { mappings.addProfile() } label: { Image(systemName: "plus") } }
-            }
-        }
     }
 }
 

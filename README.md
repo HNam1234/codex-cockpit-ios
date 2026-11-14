@@ -8,6 +8,8 @@ SwiftUI app for iOS 17+ with a native quota dashboard and a dynamic number of pe
 - The home screen fits all configured accounts in compact live-quota rows. Its small TIBO strip shows the latest reset-relevant public X post and an explicitly estimated probability of a reset today.
 - Pull down on the overview to refresh every account quota and then reload the consolidated dashboard state.
 - Compact native overview with correct remaining-quota progress bars; tap an account for full reset times and actions.
+- Shows the remaining Plus/Pro subscription days from the authenticated Codex account claim, separately from quota reset times.
+- Accounts are dynamic: create an account and its dedicated persistent WebKit together, start device-code login from the same card, or remove both from the app. Server credentials are archived on removal for recovery.
 - Dynamic account count and dynamic independent ChatGPT sessions backed by persistent `WKWebsiteDataStore` identifiers.
 - Account names and account-to-WebKit mappings reconcile automatically with the signed-in ChatGPT identity. Manual remapping remains available and swaps mappings without clearing cookies.
 - Optional local TIBO notifications explain the public signal, avoid duplicate alerts, and never include private account data.

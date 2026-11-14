@@ -104,6 +104,7 @@ struct AccountSnapshot: Decodable, Identifiable, Hashable, Sendable {
     let displayName: String?
     let email: String?
     let plan: String?
+    let subscriptionExpiresAt: Int?
     let ok: Bool
     let error: String?
     let windows: [QuotaWindow]
@@ -112,9 +113,33 @@ struct AccountSnapshot: Decodable, Identifiable, Hashable, Sendable {
 
     var identity: String { displayName ?? email ?? name }
 
+    var subscriptionExpirationDate: Date? {
+        guard let subscriptionExpiresAt, subscriptionExpiresAt > 0 else { return nil }
+        return Date(timeIntervalSince1970: TimeInterval(subscriptionExpiresAt))
+    }
+
+    func subscriptionRemainingText(at now: Date = .now) -> String? {
+        guard let expiration = subscriptionExpirationDate else { return nil }
+        let remaining = expiration.timeIntervalSince(now)
+        guard remaining > 0 else { return "Đã hết hạn" }
+        if remaining >= 86_400 {
+            return "Còn \(Int(ceil(remaining / 86_400))) ngày"
+        }
+        if remaining >= 3_600 {
+            return "Còn \(Int(ceil(remaining / 3_600))) giờ"
+        }
+        return "Còn <1 giờ"
+    }
+
+    func subscriptionIsExpired(at now: Date = .now) -> Bool {
+        guard let expiration = subscriptionExpirationDate else { return false }
+        return expiration <= now
+    }
+
     enum CodingKeys: String, CodingKey {
         case id, name, email, plan, ok, error, windows
         case displayName = "display_name"
+        case subscriptionExpiresAt = "subscription_expires_at"
         case resetCredits = "reset_credits"
         case checkedAt = "checked_at"
     }
@@ -125,12 +150,14 @@ struct AppCapabilities: Decodable, Hashable {
     let refreshUsage: Bool
     let resetCredit: Bool
     let dynamicProfiles: Bool
+    let manageAccounts: Bool?
 
     enum CodingKeys: String, CodingKey {
         case reauthorize
         case refreshUsage = "refresh_usage"
         case resetCredit = "reset_credit"
         case dynamicProfiles = "dynamic_profiles"
+        case manageAccounts = "manage_accounts"
     }
 }
 
@@ -206,7 +233,11 @@ final class AppRouter: ObservableObject {
     }
 
     func openBrowser(accountID: String, launch: BrowserLaunch = .web) {
-        cockpitPath.append(AppRoute.browser(accountID, launch))
+        if selectedTab == .profiles {
+            profilePath.append(AppRoute.browser(accountID, launch))
+        } else {
+            cockpitPath.append(AppRoute.browser(accountID, launch))
+        }
     }
 }
 
@@ -219,7 +250,10 @@ final class ProfileMappingStore: ObservableObject {
     private let mappingKey = "CodexCockpit.profileMappings.v1"
     private let countKey = "CodexCockpit.profileCount.v1"
     private let identityKey = "CodexCockpit.webIdentities.v1"
+    private let profileIDsKey = "CodexCockpit.profileIDs.v2"
+    private let profileSequenceKey = "CodexCockpit.profileSequence.v2"
     private let defaults: UserDefaults
+    private var nextProfileNumber: Int
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -230,12 +264,20 @@ final class ProfileMappingStore: ObservableObject {
         } else {
             webIdentities = [:]
         }
-        let count = max(5, defaults.integer(forKey: countKey))
-        profiles = (1...count).map { WebProfile(id: String($0)) }
+        if let ids = defaults.stringArray(forKey: profileIDsKey), !ids.isEmpty {
+            profiles = ids.map(WebProfile.init(id:))
+        } else {
+            let count = max(5, defaults.integer(forKey: countKey))
+            profiles = (1...count).map { WebProfile(id: String($0)) }
+        }
+        nextProfileNumber = max(
+            defaults.integer(forKey: profileSequenceKey),
+            profiles.compactMap { Int($0.id) }.max() ?? 0
+        )
     }
 
     func synchronize(accounts: [AccountSnapshot]) {
-        while profiles.count < max(5, accounts.count) { addProfile(save: false) }
+        while profiles.count < accounts.count { addProfile(save: false) }
         var used = Set(mappings.values)
         for account in accounts where mappings[account.id] == nil {
             let preferred = profiles.first(where: { $0.id == account.id && !used.contains($0.id) })
@@ -294,6 +336,32 @@ final class ProfileMappingStore: ObservableObject {
         save()
     }
 
+    @discardableResult
+    func createDedicatedProfile(for accountID: String) -> WebProfile {
+        if let profileID = mappings[accountID] { return profile(id: profileID) }
+        let used = Set(mappings.values)
+        let profile: WebProfile
+        if let available = profiles.first(where: { !used.contains($0.id) }) {
+            profile = available
+        } else {
+            profile = nextProfile()
+            profiles.append(profile)
+        }
+        mappings[accountID] = profile.id
+        save()
+        return profile
+    }
+
+    @discardableResult
+    func removeAccount(_ accountID: String) -> WebProfile? {
+        guard let profileID = mappings.removeValue(forKey: accountID) else { return nil }
+        let removed = profile(id: profileID)
+        webIdentities.removeValue(forKey: profileID)
+        profiles.removeAll { $0.id == profileID }
+        save()
+        return removed
+    }
+
     private func assignMapping(accountID: String, to profileID: String) {
         let oldProfile = mappings[accountID]
         if let other = mappings.first(where: { $0.key != accountID && $0.value == profileID })?.key {
@@ -312,14 +380,20 @@ final class ProfileMappingStore: ObservableObject {
     }
 
     func addProfile(save shouldSave: Bool = true) {
-        let next = (profiles.compactMap { Int($0.id) }.max() ?? 0) + 1
-        profiles.append(WebProfile(id: String(next)))
+        profiles.append(nextProfile())
         if shouldSave { save() }
+    }
+
+    private func nextProfile() -> WebProfile {
+        nextProfileNumber += 1
+        return WebProfile(id: String(nextProfileNumber))
     }
 
     private func save() {
         defaults.set(mappings, forKey: mappingKey)
         defaults.set(profiles.count, forKey: countKey)
+        defaults.set(profiles.map(\.id), forKey: profileIDsKey)
+        defaults.set(nextProfileNumber, forKey: profileSequenceKey)
         if let data = try? JSONEncoder().encode(webIdentities) {
             defaults.set(data, forKey: identityKey)
         }

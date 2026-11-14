@@ -28,6 +28,7 @@ final class CockpitStoreTests: XCTestCase {
             displayName: displayName,
             email: "user\(id)@example.com",
             plan: "plus",
+            subscriptionExpiresAt: 2_000_000_000,
             ok: true,
             error: nil,
             windows: [QuotaWindow(
@@ -62,7 +63,8 @@ private actor CockpitAPIStub: CockpitAPIClient {
                 reauthorize: true,
                 refreshUsage: true,
                 resetCredit: false,
-                dynamicProfiles: true
+                dynamicProfiles: true,
+                manageAccounts: true
             ),
             tiboReset: nil,
             accounts: initialAccounts
@@ -78,6 +80,7 @@ private actor CockpitAPIStub: CockpitAPIClient {
             displayName: "Fresh \(accountID)",
             email: "user\(accountID)@example.com",
             plan: "plus",
+            subscriptionExpiresAt: 2_000_000_000,
             ok: true,
             error: nil,
             windows: [QuotaWindow(
@@ -101,6 +104,14 @@ private actor CockpitAPIStub: CockpitAPIClient {
     }
 
     func consumeResetCredit(accountID: String, idempotencyKey: String) async throws -> ResetCreditResult {
+        throw StubError.unused
+    }
+
+    func createAccount(name: String) async throws -> AccountSnapshot {
+        throw StubError.unused
+    }
+
+    func deleteAccount(accountID: String) async throws {
         throw StubError.unused
     }
 

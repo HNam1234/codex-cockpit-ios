@@ -23,6 +23,8 @@ protocol CockpitAPIClient: Sendable {
     func startAuthorization(accountID: String) async throws -> LoginSession
     func authorizationStatus(sessionID: String) async throws -> LoginSession
     func consumeResetCredit(accountID: String, idempotencyKey: String) async throws -> ResetCreditResult
+    func createAccount(name: String) async throws -> AccountSnapshot
+    func deleteAccount(accountID: String) async throws
 }
 
 actor CockpitAPI: CockpitAPIClient {
@@ -66,6 +68,23 @@ actor CockpitAPI: CockpitAPIClient {
             as: ResetEnvelope.self
         )
         return ResetCreditResult(outcome: envelope.outcome, account: envelope.account)
+    }
+
+    func createAccount(name: String) async throws -> AccountSnapshot {
+        let envelope = try await post(
+            "app-account/create",
+            values: ["name": name],
+            as: AccountEnvelope.self
+        )
+        return envelope.account
+    }
+
+    func deleteAccount(accountID: String) async throws {
+        _ = try await post(
+            "app-account/delete",
+            values: ["account_id": accountID],
+            as: DeleteAccountEnvelope.self
+        )
     }
 
     private func post<T: Decodable>(
@@ -113,3 +132,4 @@ private struct ResetEnvelope: Decodable {
     let outcome: String
     let account: AccountSnapshot
 }
+private struct DeleteAccountEnvelope: Decodable { let deleted: Bool }

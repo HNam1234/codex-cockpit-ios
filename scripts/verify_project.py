@@ -19,6 +19,10 @@ for endpoint in ("app-status", "app-auth/start", "app-auth/status", "app-reset-c
     assert endpoint in api_source
 assert "AppAuth.cockpitToken" in api_source
 assert "tiboReset" in profile_source
+assert "subscriptionExpiresAt" in profile_source
+assert "subscriptionRemainingText" in profile_source
+assert "createDedicatedProfile" in profile_source
+assert "removeAccount" in profile_source
 
 web_source = (root / "CodexCockpit/Web/ProfileWebView.swift").read_text(encoding="utf-8")
 assert "onIdentityDetected" in web_source
@@ -66,6 +70,15 @@ assert "callAsyncJavaScript" in device_code_source
 assert "Task.sleep" in device_code_source
 assert "input.focus()" in device_code_source
 assert "input.value === code" in device_code_source
+
+accounts_source = (root / "CodexCockpit/Views/AccountsView.swift").read_text(encoding="utf-8")
+assert "Thêm account + WebKit" in accounts_source
+assert "Device code" in accounts_source
+assert "ProfileDataStore.clear" in accounts_source
+
+api_source = (root / "CodexCockpit/Services/CockpitAPI.swift").read_text(encoding="utf-8")
+assert "app-account/create" in api_source
+assert "app-account/delete" in api_source
 
 for path in (root / "CodexCockpit/Assets.xcassets").rglob("Contents.json"):
     json.loads(path.read_text(encoding="utf-8"))

@@ -128,6 +128,21 @@ final class ProfileMappingTests: XCTestCase {
         XCTAssertEqual(binding.profile(in: store).id, "1")
     }
 
+    func testDedicatedProfileIsUniqueAndRemovedWithAccount() {
+        let store = ProfileMappingStore(defaults: defaults)
+
+        let created = store.createDedicatedProfile(for: "new-account")
+
+        XCTAssertEqual(store.profile(for: "new-account"), created)
+        XCTAssertEqual(store.mappedAccountID(for: created.id), "new-account")
+        XCTAssertEqual(store.removeAccount("new-account"), created)
+        XCTAssertNil(store.mappedAccountID(for: created.id))
+        XCTAssertFalse(store.profiles.contains(created))
+
+        let replacement = store.createDedicatedProfile(for: "replacement")
+        XCTAssertNotEqual(replacement.id, created.id)
+    }
+
     private func account(
         id: String,
         name: String,
@@ -140,6 +155,7 @@ final class ProfileMappingTests: XCTestCase {
             displayName: displayName,
             email: email,
             plan: nil,
+            subscriptionExpiresAt: nil,
             ok: email != nil,
             error: email == nil ? "Unavailable" : nil,
             windows: [],

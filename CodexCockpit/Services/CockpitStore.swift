@@ -10,6 +10,7 @@ final class CockpitStore: ObservableObject {
     @Published private(set) var isLoading = false
     @Published private(set) var busyAccounts: Set<String> = []
     @Published private(set) var loginSessions: [String: LoginSession] = [:]
+    @Published private(set) var isCreatingAccount = false
     @Published var errorMessage: String?
 
     private let api: any CockpitAPIClient
@@ -103,7 +104,8 @@ final class CockpitStore: ObservableObject {
         }
     }
 
-    func beginReauthorization(accountID: String) async {
+    @discardableResult
+    func beginReauthorization(accountID: String) async -> LoginSession? {
         busyAccounts.insert(accountID)
         defer { busyAccounts.remove(accountID) }
         do {
@@ -111,8 +113,42 @@ final class CockpitStore: ObservableObject {
             loginSessions[accountID] = session
             errorMessage = nil
             startPolling(accountID: accountID, sessionID: session.sessionID)
+            return session
         } catch {
             errorMessage = error.localizedDescription
+            return nil
+        }
+    }
+
+    func createAccount(name: String) async -> AccountSnapshot? {
+        guard !isCreatingAccount else { return nil }
+        isCreatingAccount = true
+        defer { isCreatingAccount = false }
+        do {
+            let account = try await api.createAccount(name: name)
+            replace(account)
+            errorMessage = nil
+            return account
+        } catch {
+            errorMessage = error.localizedDescription
+            return nil
+        }
+    }
+
+    func deleteAccount(accountID: String) async -> Bool {
+        busyAccounts.insert(accountID)
+        defer { busyAccounts.remove(accountID) }
+        do {
+            try await api.deleteAccount(accountID: accountID)
+            loginTasks[accountID]?.cancel()
+            loginTasks.removeValue(forKey: accountID)
+            loginSessions.removeValue(forKey: accountID)
+            accounts.removeAll { $0.id == accountID }
+            errorMessage = nil
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
         }
     }
 

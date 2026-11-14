@@ -172,6 +172,12 @@ struct AccountOverviewCard: View {
                 Text(displayIdentity).font(.subheadline.weight(.bold)).lineLimit(1)
                 Text([account.name, account.plan?.uppercased()].compactMap { $0 }.joined(separator: " · "))
                     .font(.caption2.weight(.medium)).foregroundStyle(.secondary).lineLimit(1)
+                if let remaining = account.subscriptionRemainingText() {
+                    Label(remaining, systemImage: "calendar.badge.clock")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(account.subscriptionIsExpired() ? .red : CockpitTheme.violet)
+                        .lineLimit(1)
+                }
             }
             .frame(maxWidth: 112, alignment: .leading)
             Spacer(minLength: 2)
@@ -186,7 +192,7 @@ struct AccountOverviewCard: View {
             Image(systemName: "chevron.right").font(.caption.weight(.bold)).foregroundStyle(.tertiary)
         }
         .padding(.horizontal, 11).padding(.vertical, 8)
-        .frame(maxWidth: .infinity, minHeight: 63)
+        .frame(maxWidth: .infinity, minHeight: 66)
         .glassCard(cornerRadius: 18)
     }
 }
