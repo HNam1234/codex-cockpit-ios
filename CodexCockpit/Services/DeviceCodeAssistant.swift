@@ -78,7 +78,9 @@ enum DeviceCodeAssistant {
                     if (!input) return false;
                     const form = input.form || input.closest('form');
                     if (!form) return false;
-                    const button = form.querySelector('button[type="submit"], input[type="submit"], button:not([type])');
+                    const button = Array.from(document.querySelectorAll(
+                      'button[type="submit"], input[type="submit"], button:not([type])'
+                    )).find(candidate => candidate.form === form);
                     if (!button || button.disabled || button.getAttribute('aria-disabled') === 'true') return false;
                     button.click();
                     return true;

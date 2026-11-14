@@ -69,8 +69,9 @@ final class BrowserState: ObservableObject {
         deviceCodeFillTask = Task { @MainActor [weak self, weak webView] in
             guard let self, let webView else { return }
             if await DeviceCodeAssistant.fill(code, in: webView) {
-                _ = await DeviceCodeAssistant.submit(in: webView)
-                self.markDeviceCodeFilled(code)
+                if await DeviceCodeAssistant.submit(in: webView) {
+                    self.markDeviceCodeFilled(code)
+                }
             }
         }
     }
