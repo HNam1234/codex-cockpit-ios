@@ -3,6 +3,7 @@ import SwiftUI
 struct SettingsView: View {
     @EnvironmentObject private var store: CockpitStore
     @EnvironmentObject private var mappings: ProfileMappingStore
+    @EnvironmentObject private var tiboNotifications: TiboNotificationManager
 
     var body: some View {
         ZStack {
@@ -28,6 +29,26 @@ struct SettingsView: View {
                             .font(.subheadline).foregroundStyle(.secondary)
                     }
                     settingsCard("TIBO", icon: "waveform.path.ecg", tint: CockpitTheme.accent) {
+                        Toggle(isOn: Binding(
+                            get: { tiboNotifications.isEnabled },
+                            set: { tiboNotifications.setEnabled($0) }
+                        )) {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("Thông báo tín hiệu mạnh")
+                                Text("Chỉ báo khi trạng thái mới là có khả năng hoặc đã xác nhận.")
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                        .disabled(tiboNotifications.isRequestingPermission)
+                        if tiboNotifications.isRequestingPermission {
+                            ProgressView("Đang xin quyền thông báo…")
+                                .font(.caption)
+                        }
+                        if tiboNotifications.permissionDenied {
+                            Label("Quyền thông báo đang bị tắt trong Cài đặt iOS.", systemImage: "bell.slash.fill")
+                                .font(.caption).foregroundStyle(.orange)
+                        }
+                        Divider()
                         Text("VPS đọc tracker OpenTheRank và trạng thái công khai @thsottiaux trên X mỗi 15 phút. Tỷ lệ hôm nay là ước tính từ lịch sử + tín hiệu X; không dữ liệu tài khoản nào được gửi ra ngoài.")
                             .font(.subheadline).foregroundStyle(.secondary)
                     }
