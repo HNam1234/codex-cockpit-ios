@@ -111,7 +111,7 @@ struct AccountHealthBadge: View {
     }
 
     var body: some View {
-        Label(health.title, systemImage: health.systemImage)
+        Label(compact ? health.compactTitle : health.title, systemImage: health.systemImage)
             .font(.system(size: compact ? 8 : 10, weight: .bold))
             .foregroundStyle(tint)
             .lineLimit(1)

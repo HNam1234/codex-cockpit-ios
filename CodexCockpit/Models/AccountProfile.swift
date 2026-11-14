@@ -102,6 +102,17 @@ enum AccountHealth: Equatable {
         }
     }
 
+    var compactTitle: String {
+        switch self {
+        case .needsLogin: "Cần login"
+        case .expired: "Hết hạn"
+        case .expiring: "Sắp hạn"
+        case .quotaCritical: "Quota <10%"
+        case .quotaLow: "Quota thấp"
+        case .healthy: "Ổn"
+        }
+    }
+
     var systemImage: String {
         switch self {
         case .needsLogin: "person.crop.circle.badge.exclamationmark"
