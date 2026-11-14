@@ -1,9 +1,12 @@
 import SwiftUI
 
 struct RootView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var router = AppRouter()
     @StateObject private var store = CockpitStore()
     @StateObject private var mappings = ProfileMappingStore()
+    @StateObject private var tiboNotifications = TiboNotificationManager()
+    @StateObject private var identityScanner = WebIdentityScanner()
 
     var body: some View {
         TabView(selection: $router.selectedTab) {
@@ -33,12 +36,29 @@ struct RootView: View {
         .environmentObject(router)
         .environmentObject(store)
         .environmentObject(mappings)
-        .task {
-            guard ProcessInfo.processInfo.environment["UITEST_MODE"] == nil else { return }
+        .environmentObject(tiboNotifications)
+        .task(id: scenePhase) {
+            guard ProcessInfo.processInfo.environment["UITEST_MODE"] == nil,
+                  scenePhase == .active else { return }
             await store.load()
-        }
-        .onChange(of: store.accounts.map(\.id)) { _, _ in
             mappings.synchronize(accounts: store.accounts)
+            await identityScanner.scan(profiles: mappings.profiles) { profileID, identity in
+                mappings.record(identity: identity, for: profileID, accounts: store.accounts)
+            }
+            while !Task.isCancelled {
+                do {
+                    try await Task.sleep(for: .seconds(store.pollSeconds))
+                } catch {
+                    return
+                }
+                await store.load()
+            }
+        }
+        .onChange(of: store.accounts) { _, _ in
+            mappings.synchronize(accounts: store.accounts)
+        }
+        .onChange(of: store.tiboReset) { _, signal in
+            tiboNotifications.process(signal)
         }
     }
 

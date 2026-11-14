@@ -41,6 +41,22 @@ final class ProfileMappingTests: XCTestCase {
         XCTAssertNil(WebAccountIdentity(javaScriptValue: ["name": " ", "email": "\n"]))
     }
 
+    func testChatGPTSessionPayloadExtractsOnlyNestedUserIdentity() {
+        let identity = WebAccountIdentity(sessionJavaScriptValue: [
+            "expires": "2026-12-01T00:00:00Z",
+            "user": [
+                "name": "  Foreground Account ",
+                "email": " foreground@example.com ",
+                "image": "https://example.com/avatar.png"
+            ]
+        ])
+
+        XCTAssertEqual(identity?.name, "Foreground Account")
+        XCTAssertEqual(identity?.email, "foreground@example.com")
+        XCTAssertNil(WebAccountIdentity(sessionJavaScriptValue: ["user": NSNull()]))
+        XCTAssertNil(WebAccountIdentity(sessionJavaScriptValue: ["email": "top-level@example.com"]))
+    }
+
     func testUniqueCaseInsensitiveEmailMatchSwapsExistingMappings() {
         let store = ProfileMappingStore(defaults: defaults)
         let first = account(id: "1", name: "Codex 1", email: "first@example.com")

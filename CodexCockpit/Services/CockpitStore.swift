@@ -6,6 +6,7 @@ final class CockpitStore: ObservableObject {
     @Published private(set) var capabilities: AppCapabilities?
     @Published private(set) var tiboReset: TiboResetStatus?
     @Published private(set) var updatedAt: Int = 0
+    @Published private(set) var pollSeconds = 900
     @Published private(set) var isLoading = false
     @Published private(set) var busyAccounts: Set<String> = []
     @Published private(set) var loginSessions: [String: LoginSession] = [:]
@@ -27,6 +28,7 @@ final class CockpitStore: ObservableObject {
             capabilities = response.capabilities
             tiboReset = response.tiboReset
             updatedAt = response.updatedAt
+            pollSeconds = Self.clampedPollSeconds(response.pollSeconds)
             errorMessage = nil
         } catch {
             errorMessage = error.localizedDescription
@@ -103,5 +105,9 @@ final class CockpitStore: ObservableObject {
             accounts.append(account)
         }
         updatedAt = max(updatedAt, account.checkedAt)
+    }
+
+    nonisolated static func clampedPollSeconds(_ seconds: Int) -> Int {
+        min(3_600, max(60, seconds))
     }
 }

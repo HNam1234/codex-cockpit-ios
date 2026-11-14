@@ -101,19 +101,33 @@ struct TiboResetBanner: View {
             RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .fill(LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing))
             Circle().fill(.white.opacity(0.15)).frame(width: 120).blur(radius: 4).offset(x: 145, y: -35)
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 5) {
-                    Label("TIBO ON X", systemImage: "waveform.path.ecg")
-                        .font(.caption2.weight(.heavy)).tracking(1.1)
-                    if let post = signal.hintPost {
-                        Text("“\(post.text)”").font(.headline.weight(.bold)).lineLimit(2)
-                        if let url = URL(string: post.url) {
-                            Link("@thsottiaux · mở trên X", destination: url)
-                                .font(.caption2.weight(.semibold)).opacity(0.86)
-                        }
+            HStack(spacing: 13) {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 7) {
+                        Label(signal.presentationStatus, systemImage: signal.presentationIcon)
+                            .font(.system(size: 9, weight: .heavy)).tracking(0.7)
+                            .padding(.horizontal, 8).padding(.vertical, 5)
+                            .background(.white.opacity(0.17), in: Capsule())
+                        Spacer(minLength: 0)
+                        Text(Date(timeIntervalSince1970: TimeInterval(signal.fetchedAt)), style: .relative)
+                            .font(.system(size: 9, weight: .semibold)).opacity(0.75)
+                    }
+                    if let post = signal.hintPost ?? signal.latestPost {
+                        Text("“\(post.text)”").font(.subheadline.weight(.bold)).lineLimit(2)
                     } else {
                         Text(signal.message).font(.subheadline.weight(.bold)).lineLimit(2)
                     }
+                    HStack(spacing: 4) {
+                        if let url = signal.presentationURL {
+                            Link(destination: url) {
+                                Label(signal.presentationSource, systemImage: "arrow.up.right")
+                            }
+                        } else {
+                            Label(signal.presentationSource, systemImage: "antenna.radiowaves.left.and.right")
+                        }
+                        Text("· \(signal.presentationBasis)")
+                    }
+                    .font(.system(size: 9, weight: .semibold)).opacity(0.8).lineLimit(1)
                 }
                 Spacer(minLength: 2)
                 VStack(spacing: 3) {
@@ -132,11 +146,11 @@ struct TiboResetBanner: View {
             }
             .foregroundStyle(.white).padding(13)
         }
-        .frame(height: 108)
+        .frame(height: 124)
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         .shadow(color: colors[0].opacity(0.22), radius: 14, y: 7)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("TIBO: \(signal.hintPost?.text ?? signal.message). Xác suất reset hôm nay \(signal.probabilityToday ?? 0) phần trăm")
+        .accessibilityLabel("TIBO \(signal.presentationStatus): \(signal.hintPost?.text ?? signal.latestPost?.text ?? signal.message). Xác suất reset hôm nay \(signal.probabilityToday ?? 0) phần trăm")
     }
 }
 

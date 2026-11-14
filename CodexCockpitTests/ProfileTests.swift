@@ -24,4 +24,40 @@ final class ProfileTests: XCTestCase {
         XCTAssertEqual(AppURLs.deviceLogin.host, "auth.openai.com")
         XCTAssertEqual(AppURLs.deviceLogin.path, "/codex/device")
     }
+
+    func testStatusPollingIntervalIsClampedToSafeActiveRange() {
+        XCTAssertEqual(CockpitStore.clampedPollSeconds(0), 60)
+        XCTAssertEqual(CockpitStore.clampedPollSeconds(30), 60)
+        XCTAssertEqual(CockpitStore.clampedPollSeconds(900), 900)
+        XCTAssertEqual(CockpitStore.clampedPollSeconds(7_200), 3_600)
+    }
+
+    func testTiboPresentationExposesStateFreshnessAndSource() {
+        let post = TiboResetStatus.Post(
+            text: "A reset hint",
+            id: "post-1",
+            createdAt: "2026-11-14T06:00:00Z",
+            url: "https://x.com/thsottiaux/status/post-1"
+        )
+        let signal = TiboResetStatus(
+            status: "likely",
+            kind: "hint",
+            message: "Likely today",
+            latestAt: nil,
+            pendingAt: nil,
+            fetchedAt: 100,
+            source: "OpenTheRank",
+            xSource: "@thsottiaux",
+            latestPost: nil,
+            hintPost: post,
+            probabilityToday: 80,
+            probabilityBasis: "history+x",
+            stale: false
+        )
+
+        XCTAssertEqual(signal.presentationStatus, "CÓ KHẢ NĂNG")
+        XCTAssertEqual(signal.presentationIcon, "sparkles")
+        XCTAssertEqual(signal.presentationURL, URL(string: post.url))
+        XCTAssertEqual(signal.presentationSource, "@thsottiaux")
+    }
 }

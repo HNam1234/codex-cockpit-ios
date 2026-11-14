@@ -317,6 +317,7 @@ final class ProfileMappingStore: ObservableObject {
 enum AppURLs {
     static let base = URL(string: "https://mach-dns.tail2e377d.ts.net/codex/")!
     static let chatGPT = URL(string: "https://chatgpt.com/")!
+    static let chatGPTSession = URL(string: "https://chatgpt.com/api/auth/session")!
     static let deviceLogin = URL(string: "https://auth.openai.com/codex/device")!
 
     static func endpoint(_ path: String) -> URL {

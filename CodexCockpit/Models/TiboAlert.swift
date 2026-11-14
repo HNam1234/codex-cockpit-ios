@@ -48,3 +48,39 @@ enum TiboAlertPolicy {
         return digest.prefix(8).map { String(format: "%02x", $0) }.joined()
     }
 }
+
+extension TiboResetStatus {
+    var presentationStatus: String {
+        if stale { return "DỮ LIỆU CŨ" }
+        switch status {
+        case "yes": return "ĐÃ XÁC NHẬN"
+        case "likely": return "CÓ KHẢ NĂNG"
+        case "no": return "CHƯA CÓ TÍN HIỆU"
+        default: return "ĐANG THEO DÕI"
+        }
+    }
+
+    var presentationIcon: String {
+        if stale { return "clock.badge.exclamationmark" }
+        switch status {
+        case "yes": return "checkmark.seal.fill"
+        case "likely": return "sparkles"
+        case "no": return "eye.fill"
+        default: return "waveform.path.ecg"
+        }
+    }
+
+    var presentationURL: URL? {
+        let value = hintPost?.url ?? latestPost?.url
+        return value.flatMap(URL.init(string:))
+    }
+
+    var presentationSource: String {
+        let trimmedXSource = xSource?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedXSource?.isEmpty == false ? trimmedXSource! : source
+    }
+
+    var presentationBasis: String {
+        probabilityBasis == nil ? "Ước tính theo lịch sử" : "Ước tính từ lịch sử + tín hiệu X"
+    }
+}

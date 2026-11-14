@@ -19,6 +19,28 @@ for endpoint in ("app-status", "app-auth/start", "app-auth/status", "app-reset-c
     assert endpoint in api_source
 assert "tiboReset" in profile_source
 
+web_source = (root / "CodexCockpit/Web/ProfileWebView.swift").read_text(encoding="utf-8")
+assert "onIdentityDetected" in web_source
+assert "/api/auth/session" in web_source
+for forbidden_web_read in ("document.cookie", "localStorage", "sessionStorage"):
+    assert forbidden_web_read not in web_source, f"forbidden WebKit secret read: {forbidden_web_read}"
+
+notification_source = (root / "CodexCockpit/Services/TiboNotificationManager.swift").read_text(encoding="utf-8")
+assert "requestAuthorization" in notification_source
+assert "lastAlertKey" in notification_source
+assert "TiboAlertPolicy.content" in notification_source
+
+root_source = (root / "CodexCockpit/Views/RootView.swift").read_text(encoding="utf-8")
+assert ".task(id: scenePhase)" in root_source
+assert "scenePhase == .active" in root_source
+assert "identityScanner.scan" in root_source
+
+scanner_source = (root / "CodexCockpit/Services/WebIdentityScanner.swift").read_text(encoding="utf-8")
+assert "ProfileDataStore.store" in scanner_source
+assert "AppURLs.chatGPTSession" in scanner_source
+for forbidden_scanner_read in ("document.cookie", "localStorage", "sessionStorage"):
+    assert forbidden_scanner_read not in scanner_source, f"forbidden scanner secret read: {forbidden_scanner_read}"
+
 for path in (root / "CodexCockpit/Assets.xcassets").rglob("Contents.json"):
     json.loads(path.read_text(encoding="utf-8"))
 
