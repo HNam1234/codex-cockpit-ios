@@ -107,9 +107,18 @@ struct AccountsView: View {
                                 .foregroundStyle(account.subscriptionIsExpired() ? .red : CockpitTheme.violet)
                         }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     Spacer(minLength: 4)
-                    if busy { ProgressView().controlSize(.small) }
-                    else { Image(systemName: "chevron.right").foregroundStyle(.tertiary) }
+                    if busy {
+                        ProgressView().controlSize(.small)
+                    } else if account.ok, !account.windows.isEmpty {
+                        AccountQuotaSnapshot(windows: Array(account.windows.prefix(2)))
+                            .frame(width: 105)
+                    } else {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.red)
+                    }
+                    Image(systemName: "chevron.right").foregroundStyle(.tertiary)
                 }
                 .contentShape(Rectangle())
             }
@@ -233,5 +242,46 @@ private struct CompactAccountActionStyle: ButtonStyle {
             .background(tint.opacity(configuration.isPressed ? 0.18 : 0.1), in: Capsule())
             .scaleEffect(configuration.isPressed ? 0.97 : 1)
             .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+    }
+}
+
+private struct AccountQuotaSnapshot: View {
+    let windows: [QuotaWindow]
+
+    var body: some View {
+        VStack(spacing: 6) {
+            ForEach(windows) { window in
+                VStack(spacing: 3) {
+                    HStack(spacing: 3) {
+                        Text(window.label)
+                            .font(.system(size: 9, weight: .bold)).lineLimit(1)
+                        Spacer(minLength: 2)
+                        Text("\(Int(window.remainingPercent.rounded()))%")
+                            .font(.system(size: 9, weight: .heavy, design: .monospaced))
+                            .foregroundStyle(color(for: window.remainingPercent))
+                    }
+                    GeometryReader { proxy in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(.secondary.opacity(0.12))
+                            Capsule().fill(color(for: window.remainingPercent))
+                                .frame(
+                                    width: proxy.size.width
+                                        * max(0, min(1, window.remainingPercent / 100))
+                                )
+                        }
+                    }
+                    .frame(height: 4)
+                }
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private func color(for remaining: Double) -> Color {
+        switch remaining {
+        case 50...: .green
+        case 20..<50: .orange
+        default: CockpitTheme.accent
+        }
     }
 }

@@ -75,6 +75,8 @@ accounts_source = (root / "CodexCockpit/Views/AccountsView.swift").read_text(enc
 assert "Thêm account + WebKit" in accounts_source
 assert "Device code" in accounts_source
 assert "ProfileDataStore.clear" in accounts_source
+assert "AccountQuotaSnapshot" in accounts_source
+assert "window.remainingPercent" in accounts_source
 
 api_source = (root / "CodexCockpit/Services/CockpitAPI.swift").read_text(encoding="utf-8")
 assert "app-account/create" in api_source
