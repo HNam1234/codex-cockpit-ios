@@ -94,6 +94,55 @@ final class CockpitOAuthRelayTests: XCTestCase {
         }
     }
 
+    func testInspectCallbackCapturesOnlyTheExpectedCallback() throws {
+        let attempt = try CockpitOAuthRelay.prepare(directAuthorizeURL)
+        let callbackURL = try XCTUnwrap(
+            URL(string: "http://localhost:1455/auth/callback?code=authorization-code&state=state-123")
+        )
+
+        XCTAssertEqual(
+            CockpitOAuthRelay.inspectCallback(callbackURL, for: attempt),
+            .captured(CockpitOAuthCallback(url: callbackURL))
+        )
+    }
+
+    func testInspectCallbackIgnoresOrdinaryHTTPSNavigation() throws {
+        let attempt = try CockpitOAuthRelay.prepare(directAuthorizeURL)
+        let ordinaryURL = try XCTUnwrap(URL(string: "https://auth.openai.com/account/select"))
+
+        XCTAssertEqual(CockpitOAuthRelay.inspectCallback(ordinaryURL, for: attempt), .notCallback)
+    }
+
+    func testInspectCallbackRejectsLookalikesAndMismatches() throws {
+        let attempt = try CockpitOAuthRelay.prepare(directAuthorizeURL)
+        let cases = [
+            "http://localhost.evil.example:1455/auth/callback?code=authorization-code&state=state-123",
+            "http://127.0.0.1:1455/auth/callback?code=authorization-code&state=state-123",
+            "http://localhost:9876/auth/callback?code=authorization-code&state=state-123",
+            "http://localhost:1455/wrong?code=authorization-code&state=state-123",
+            "https://localhost:1455/auth/callback?code=authorization-code&state=state-123",
+            "http://user@localhost:1455/auth/callback?code=authorization-code&state=state-123",
+            "http://localhost:1455/auth/callback?code=authorization-code&state=state-123#fragment",
+            "http://localhost:1455/auth/callback?state=state-123",
+            "http://localhost:1455/auth/callback?code=authorization-code&code=second&state=state-123",
+            "http://localhost:1455/auth/callback?code=authorization-code",
+            "http://localhost:1455/auth/callback?code=authorization-code&state=state-123&state=second",
+            "http://localhost:1455/auth/callback?code=&state=state-123",
+            "http://localhost:1455/auth/callback?code=authorization-code&state=state-124"
+        ]
+
+        for value in cases {
+            let url = try XCTUnwrap(URL(string: value))
+            let result = CockpitOAuthRelay.inspectCallback(url, for: attempt)
+            guard case let .rejected(error) = result else {
+                return XCTFail("Expected callback rejection for \(url.host ?? "unknown host")")
+            }
+            XCTAssertTrue(error.localizationKey.hasPrefix("oauth.relay.error."))
+            XCTAssertFalse(error.localizationKey.contains("authorization-code"))
+            XCTAssertFalse(error.localizationKey.contains("state-12"))
+        }
+    }
+
     private func makeHostedURL(authorizeURL: String) throws -> URL {
         var components = URLComponents(string: "https://chatgpt.com/codex/desktop-auth")!
         components.queryItems = [URLQueryItem(name: "authorize_url", value: authorizeURL)]
