@@ -37,6 +37,11 @@ struct RootView: View {
         .environmentObject(store)
         .environmentObject(mappings)
         .environmentObject(tiboNotifications)
+        .onAppear {
+            if ProcessInfo.processInfo.environment["PREVIEW_TAB"] == "profiles" {
+                router.selectedTab = .profiles
+            }
+        }
         .task(id: scenePhase) {
             guard ProcessInfo.processInfo.environment["UITEST_MODE"] == nil,
                   scenePhase == .active else { return }

@@ -41,6 +41,9 @@ jobs:
           sleep 10
           mkdir -p .build/preview
           xcrun simctl io "$DEVICE_UDID" screenshot .build/preview/cockpit-home.png
+          SIMCTL_CHILD_PREVIEW_TAB=profiles xcrun simctl launch --terminate-running-process "$DEVICE_UDID" vn.nam.CodexCockpit
+          sleep 5
+          xcrun simctl io "$DEVICE_UDID" screenshot .build/preview/cockpit-accounts.png
       - name: Build device app without signing
         run: |
           xcodebuild \
