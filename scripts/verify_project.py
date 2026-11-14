@@ -83,7 +83,7 @@ assert "window.remainingPercent" in accounts_source
 
 pc_code_source = (root / "CodexCockpit/Views/DeviceAuthorizationSheet.swift").read_text(encoding="utf-8")
 assert "codex login --device-auth" in pc_code_source
-assert "App không gửi mã này lên VPS" in pc_code_source
+assert "VPS" not in pc_code_source
 assert "beginReauthorization" not in pc_code_source
 
 api_source = (root / "CodexCockpit/Services/CockpitAPI.swift").read_text(encoding="utf-8")

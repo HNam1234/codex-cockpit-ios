@@ -24,7 +24,6 @@ struct PCDeviceCodeSheet: View {
                         header
                         instructionsCard
                         codeCard
-                        privacyNote
                     }
                     .padding(18)
                 }
@@ -105,15 +104,6 @@ struct PCDeviceCodeSheet: View {
         }
         .padding(18)
         .glassCard(cornerRadius: 22)
-    }
-
-    private var privacyNote: some View {
-        Label(
-            "Device Code chỉ được chuyển cục bộ vào WebKit trên iPhone. App không gửi mã này lên VPS.",
-            systemImage: "lock.shield.fill"
-        )
-        .font(.caption).foregroundStyle(.secondary)
-        .padding(.horizontal, 6)
     }
 
     private func instructionRow(number: Int, text: String) -> some View {
