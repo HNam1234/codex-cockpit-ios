@@ -129,13 +129,14 @@ struct AccountsView: View {
                             .font(.headline).foregroundStyle(.primary).lineLimit(1)
                         Text("\(profile.name) · \(account.plan?.uppercased() ?? "CHƯA ĐĂNG NHẬP")")
                             .font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                        HStack(spacing: 5) {
+                        VStack(alignment: .leading, spacing: 3) {
                             if let remaining = account.subscriptionRemainingText() {
                                 Text(compactSubscriptionText(remaining))
                                     .font(.caption2.weight(.bold))
                                     .foregroundStyle(account.subscriptionIsExpired() ? .red : CockpitTheme.violet)
                             }
                             AccountHealthBadge(health: health, compact: true)
+                                .fixedSize(horizontal: true, vertical: false)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
