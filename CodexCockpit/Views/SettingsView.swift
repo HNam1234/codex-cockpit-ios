@@ -4,6 +4,7 @@ struct SettingsView: View {
     @EnvironmentObject private var store: CockpitStore
     @EnvironmentObject private var mappings: ProfileMappingStore
     @EnvironmentObject private var tiboNotifications: TiboNotificationManager
+    @EnvironmentObject private var credentials: CockpitCredentialModel
 
     var body: some View {
         ZStack {
@@ -13,9 +14,45 @@ struct SettingsView: View {
                     VStack(spacing: 10) {
                         ProfileArtwork(seed: "settings", symbol: "command", size: 92)
                         Text("Codex Cockpit").font(.title.weight(.bold))
-                        Text("1.3.0 · Premium quota control").font(.subheadline).foregroundStyle(.secondary)
+                        Text("\(appVersion) · Premium quota control").font(.subheadline).foregroundStyle(.secondary)
                     }
                     .padding(.vertical, 8)
+
+                    settingsCard("Kết nối VPS", icon: "key.fill", tint: .blue) {
+                        Label(
+                            credentials.isConfigured ? "Đã lưu token an toàn" : "Chưa cấu hình token",
+                            systemImage: credentials.isConfigured ? "checkmark.shield.fill" : "exclamationmark.shield.fill"
+                        )
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(credentials.isConfigured ? .green : .orange)
+
+                        SecureField("COCKPIT_APP_TOKEN", text: $credentials.tokenInput)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .privacySensitive()
+                            .textContentType(.password)
+
+                        HStack {
+                            Button("Lưu vào Keychain") {
+                                if credentials.save() { store.disconnect() }
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(credentials.tokenInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+                            if credentials.isConfigured {
+                                Button("Ngắt kết nối", role: .destructive) {
+                                    if credentials.clear() { store.disconnect() }
+                                }
+                                .buttonStyle(.bordered)
+                            }
+                        }
+
+                        if let error = credentials.errorMessage {
+                            Text(error).font(.caption).foregroundStyle(.red)
+                        }
+                        Text("Token chỉ nằm trong iOS Keychain trên thiết bị này; source code và IPA public không chứa token.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
 
                     settingsCard("Thư viện", icon: "square.stack.3d.up.fill", tint: CockpitTheme.violet) {
                         LabeledContent("Tài khoản Codex", value: "\(store.accounts.count)")
@@ -57,6 +94,10 @@ struct SettingsView: View {
             }
         }
         .toolbarBackground(.hidden, for: .navigationBar)
+    }
+
+    private var appVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.4.0"
     }
 
     private func settingsCard<Content: View>(

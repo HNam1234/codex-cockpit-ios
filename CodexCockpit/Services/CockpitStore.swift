@@ -36,8 +36,21 @@ final class CockpitStore: ObservableObject {
             pollSeconds = Self.clampedPollSeconds(response.pollSeconds)
             errorMessage = nil
         } catch {
+            guard !Task.isCancelled else { return }
             errorMessage = error.localizedDescription
         }
+    }
+
+    func disconnect() {
+        loginTasks.values.forEach { $0.cancel() }
+        loginTasks = [:]
+        accounts = []
+        capabilities = nil
+        tiboReset = nil
+        updatedAt = 0
+        loginSessions = [:]
+        busyAccounts = []
+        errorMessage = nil
     }
 
     func refreshAll() async {

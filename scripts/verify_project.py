@@ -17,7 +17,15 @@ assert "openDeviceLogin" in (root / "CodexCockpit/Web/BrowserState.swift").read_
 api_source = (root / "CodexCockpit/Services/CockpitAPI.swift").read_text(encoding="utf-8")
 for endpoint in ("app-status", "app-auth/start", "app-auth/status", "app-reset-credit"):
     assert endpoint in api_source
+assert "credentials.load()" in api_source
+assert "AppAuth" not in api_source
 assert "tiboReset" in profile_source
+
+credential_source = (root / "CodexCockpit/Services/CockpitCredentialStore.swift").read_text(encoding="utf-8")
+assert "import Security" in credential_source
+assert "kSecClassGenericPassword" in credential_source
+assert "kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly" in credential_source
+assert "token.count >= 32" in credential_source
 
 web_source = (root / "CodexCockpit/Web/ProfileWebView.swift").read_text(encoding="utf-8")
 assert "onIdentityDetected" in web_source
@@ -30,13 +38,24 @@ assert "historyKey" in notification_source
 assert "TiboAlertPolicy.content" in notification_source
 
 root_source = (root / "CodexCockpit/Views/RootView.swift").read_text(encoding="utf-8")
-assert ".task(id: scenePhase)" in root_source
+assert ".task(id:" in root_source
+assert "credentials.revision" in root_source
+assert "credentials.isConfigured" in root_source
 assert "scenePhase == .active" in root_source
 assert "identityScanner.scan" in root_source
 
 cockpit_source = (root / "CodexCockpit/Views/CockpitView.swift").read_text(encoding="utf-8")
-assert ".refreshable { await store.refreshAll() }" in cockpit_source
+assert ".refreshable" in cockpit_source
+assert "await store.refreshAll()" in cockpit_source
 assert ".scrollBounceBehavior(.always)" in cockpit_source
+
+workflow_text = "\n".join(
+    path.read_text(encoding="utf-8")
+    for path in (root / ".github/workflows").glob("*.yml")
+)
+assert "COCKPIT_APP_TOKEN" not in workflow_text
+assert not (root / "scripts/generate_app_auth.py").exists()
+assert not (root / "CodexCockpit/AppAuth.generated.swift").exists()
 
 scanner_source = (root / "CodexCockpit/Services/WebIdentityScanner.swift").read_text(encoding="utf-8")
 assert "ProfileDataStore.store" in scanner_source
@@ -60,4 +79,7 @@ for forbidden in ("telegram_bot_token", "password =", "auth.json", "BEGIN PRIVAT
 
 assert not re.search(r"\b\d{8,12}:[A-Za-z0-9_-]{30,}\b", all_text), "Telegram bot token-like value found"
 
-print(f"static verification passed: {len(swift)} Swift files, dynamic isolated stores, no embedded secrets")
+print(
+    f"static verification passed: {len(swift)} Swift files, dynamic isolated stores, "
+    "Keychain credentials, no embedded secrets"
+)

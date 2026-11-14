@@ -4,6 +4,7 @@ struct CockpitView: View {
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var store: CockpitStore
     @EnvironmentObject private var mappings: ProfileMappingStore
+    @EnvironmentObject private var credentials: CockpitCredentialModel
 
     var body: some View {
         Group {
@@ -21,7 +22,9 @@ struct CockpitView: View {
                         .padding(.horizontal, 13).padding(.bottom, 18)
                     }
                     .scrollBounceBehavior(.always)
-                    .refreshable { await store.refreshAll() }
+                    .refreshable {
+                        if credentials.isConfigured { await store.refreshAll() }
+                    }
                 }
             }
         }
@@ -36,7 +39,7 @@ struct CockpitView: View {
                         else { Image(systemName: "arrow.clockwise").font(.subheadline.weight(.bold)) }
                     }
                 }
-                .disabled(store.isLoading)
+                .disabled(store.isLoading || !credentials.isConfigured)
             }
         }
         .alert("Không thể cập nhật", isPresented: errorBinding) {
@@ -65,7 +68,16 @@ struct CockpitView: View {
     private var accountShelf: some View {
         VStack(alignment: .leading, spacing: 8) {
             SectionHeading(title: "Tài khoản", caption: store.accounts.isEmpty ? nil : "HIỂN THỊ TẤT CẢ")
-            if store.accounts.isEmpty && store.isLoading {
+            if !credentials.isConfigured {
+                ContentUnavailableView {
+                    Label("Chưa kết nối VPS", systemImage: "key.horizontal")
+                } description: {
+                    Text("Nhập token trong Cài đặt để tải quota. IPA public không chứa credential riêng.")
+                } actions: {
+                    Button("Mở Cài đặt") { router.selectedTab = .settings }
+                }
+                .frame(maxWidth: .infinity).glassCard()
+            } else if store.accounts.isEmpty && store.isLoading {
                 ProgressView("Đang tải quota…").frame(maxWidth: .infinity).padding(.vertical, 60)
             } else if store.accounts.isEmpty {
                 ContentUnavailableView("Chưa có tài khoản", systemImage: "person.crop.circle.badge.questionmark")

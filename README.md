@@ -6,9 +6,11 @@ SwiftUI app for iOS 17+ with a native quota dashboard and a dynamic number of pe
 
 - Soor/Apple Music-inspired native visual system: editorial gradients, artwork-style account identities, adaptive materials, large type, and compact one-hand navigation.
 - The home screen fits all configured accounts in compact live-quota rows. Its small TIBO strip shows the latest reset-relevant public X post and an explicitly estimated probability of a reset today.
+- Pull down on the overview to refresh every account quota and then reload the consolidated dashboard state.
 - Compact native overview with correct remaining-quota progress bars; tap an account for full reset times and actions.
 - Dynamic account count and dynamic independent ChatGPT sessions backed by persistent `WKWebsiteDataStore` identifiers.
-- Change account-to-WebKit mapping at any time. If a profile is already assigned, the app swaps mappings without clearing cookies.
+- Account names and account-to-WebKit mappings reconcile automatically with the signed-in ChatGPT identity. Manual remapping remains available and swaps mappings without clearing cookies.
+- Optional local TIBO notifications explain the public signal, avoid duplicate alerts, and never include private account data.
 - Reauthorize a revoked Codex account through the VPS device-login flow, then confirm inside the account's mapped WebKit.
 - Refresh usage and consume a real reset credit from the native account screen when the Codex account exposes one.
 - One global TIBO reset banner fetched by the VPS from the public OpenTheRank tracker every 15 minutes. No account data is sent to TIBO or OpenTheRank.
@@ -45,9 +47,9 @@ DEVELOPMENT_TEAM=YOUR_TEAM_ID ./scripts/build_signed_ipa.sh
 
 The iPhone UDID must belong to the provisioning profile. For installation, use Xcode Devices and Simulators, Apple Configurator, or the Apple Devices workflow approved for the profile.
 
-### Private CI option (no Mac required locally)
+### Signed CI option (no Mac required locally)
 
-The `build-signed-ipa.yml` workflow builds on a macOS GitHub runner. Use a **private** repository and add these secrets; never commit the values:
+The `build-signed-ipa.yml` workflow builds on a macOS GitHub runner. Add these GitHub Actions secrets; never commit the values or expose them to pull-request code:
 
 - `APPLE_TEAM_ID`
 - `APPLE_SIGNING_IDENTITY` (`Apple Distribution` for Ad Hoc, or `Apple Development`)
@@ -60,10 +62,16 @@ Optionally set repository variable `IOS_BUNDLE_ID`. The provisioning profile mus
 
 ## Native dashboard authentication
 
-The app calls private native JSON endpoints using a revocable token injected from the `COCKPIT_APP_TOKEN` GitHub Actions secret. The token is posted in the request body, never placed in a URL or committed to the repository.
+Public source code, build logs, and release IPAs contain no dashboard credential. On the iPhone, open **Cài đặt → Kết nối VPS**, enter the revocable `COCKPIT_APP_TOKEN` supplied by the deployment administrator, and save it. The token is validated and stored only in that device's iOS Keychain; the app never displays the saved value again.
+
+The token is posted in the HTTPS request body, never placed in a URL. Disconnecting from Settings removes it from Keychain and clears the loaded dashboard state.
 
 The account list is loaded dynamically and is not capped at five. Install upgrades over the existing app with the same Bundle ID and signing team. Changing the Bundle ID or deleting the app creates/removes the iOS sandbox, so WebKit cookies cannot be carried across that boundary.
 
 ## Current validation boundary
 
-The private macOS CI workflow builds the IPA and runs the Xcode unit/UI tests. Device-login confirmation still happens on the official OpenAI page; third-party SSO providers may choose to redirect outside embedded web views.
+The macOS CI workflow builds the IPA and runs the Xcode unit/UI tests. Device-login confirmation still happens on the official OpenAI page; third-party SSO providers may choose to redirect outside embedded web views.
+
+## Public release IPA
+
+GitHub Releases publish an **unsigned** IPA built from the tagged public source. It must be re-signed with an Apple Developer certificate or installed through a compatible sideloading service before iOS will run it. A token is entered after installation and is not bundled with the IPA.

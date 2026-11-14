@@ -7,4 +7,3 @@ DerivedData/
 *.p12
 *.mobileprovision
 CodexCockpit.xcodeproj/
-CodexCockpit/AppAuth.generated.swift
