@@ -26,8 +26,10 @@ struct CockpitOAuthEntrySheet: View {
                     }
                     Button {
                         guard let attempt else { return }
-                        onOpen(attempt)
                         dismiss()
+                        DispatchQueue.main.async {
+                            onOpen(attempt)
+                        }
                     } label: {
                         Label(L10n.text("oauth.relay.entry.open"), systemImage: "safari.fill")
                             .frame(maxWidth: .infinity)
@@ -140,7 +142,7 @@ struct CockpitOAuthResultSheet: View {
                 Text(L10n.text("oauth.relay.result.instruction"))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                Text(callback.url.absoluteString)
+                Text(callback.displayURL.absoluteString)
                     .font(.system(.caption2, design: .monospaced))
                     .lineLimit(4)
                     .textSelection(.enabled)
@@ -176,5 +178,6 @@ struct CockpitOAuthResultSheet: View {
             .navigationTitle(L10n.text("oauth.relay.result.title"))
             .navigationBarTitleDisplayMode(.inline)
         }
+        .interactiveDismissDisabled()
     }
 }

@@ -13,6 +13,15 @@ struct CockpitOAuthCallback: Identifiable, Hashable {
     let url: URL
 
     var id: URL { url }
+
+    var displayURL: URL {
+        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            return url
+        }
+        components.query = nil
+        components.fragment = nil
+        return components.url ?? url
+    }
 }
 
 enum CockpitOAuthCallbackInspection: Equatable {

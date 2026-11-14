@@ -73,7 +73,6 @@ struct AccountsView: View {
                 accountName: context.accountName,
                 identity: context.identity
             ) { attempt in
-                cockpitOAuthEntry = nil
                 router.openBrowser(
                     accountID: context.accountID,
                     launch: .cockpitOAuth(attempt)

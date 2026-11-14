@@ -107,6 +107,18 @@ final class CockpitOAuthRelayTests: XCTestCase {
         )
     }
 
+    func testCallbackDisplayURLHidesAuthorizationCodeAndState() throws {
+        let callbackURL = try XCTUnwrap(
+            URL(string: "http://localhost:1455/auth/callback?code=authorization-code&state=state-123")
+        )
+
+        let displayURL = CockpitOAuthCallback(url: callbackURL).displayURL.absoluteString
+
+        XCTAssertEqual(displayURL, "http://localhost:1455/auth/callback")
+        XCTAssertFalse(displayURL.contains("authorization-code"))
+        XCTAssertFalse(displayURL.contains("state-123"))
+    }
+
     func testInspectCallbackIgnoresOrdinaryHTTPSNavigation() throws {
         let attempt = try CockpitOAuthRelay.prepare(directAuthorizeURL)
         let ordinaryURL = try XCTUnwrap(URL(string: "https://auth.openai.com/account/select"))

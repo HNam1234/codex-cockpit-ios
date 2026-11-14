@@ -320,7 +320,6 @@ struct AccountBrowserView: View {
                 identity: mappings.webIdentities[profile.id]?.label
                     ?? store.account(id: accountID).map { mappings.displayIdentity(for: $0) }
             ) { attempt in
-                showingCockpitOAuth = false
                 didPrepareCockpitOAuth = true
                 browser.prepareCockpitOAuth(attempt)
             }
