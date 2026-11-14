@@ -20,4 +20,35 @@ final class LocalizationTests: XCTestCase {
         XCTAssertEqual(L10n.text("Nhập code từ PC", language: "vi"), "Nhập code từ PC")
         XCTAssertEqual(L10n.format("subscription.days", 3, language: "vi"), "Còn 3 ngày")
     }
+
+    func testCockpitOAuthRelayCopyExistsInBothLanguages() {
+        XCTAssertEqual(L10n.text("oauth.relay.entry.title", language: "en"), "Cockpit OAuth")
+        XCTAssertEqual(L10n.text("oauth.relay.entry.title", language: "vi"), "OAuth Cockpit")
+        XCTAssertEqual(L10n.text("oauth.relay.entry.open", language: "en"), "Open in this WebKit")
+        XCTAssertEqual(L10n.text("oauth.relay.entry.open", language: "vi"), "Mở trong WebKit này")
+        XCTAssertEqual(L10n.text("oauth.relay.result.title", language: "en"), "Authorization captured")
+        XCTAssertEqual(L10n.text("oauth.relay.result.title", language: "vi"), "Đã nhận ủy quyền")
+        XCTAssertEqual(L10n.text("oauth.relay.result.copy", language: "en"), "Copy callback")
+        XCTAssertEqual(L10n.text("oauth.relay.result.copy", language: "vi"), "Copy callback")
+    }
+
+    func testCockpitOAuthRelayErrorsAreLocalizedWithoutSecretValues() {
+        for error in [
+            CockpitOAuthRelayError.invalidAuthorizationURL,
+            .unsupportedAuthorizationURL,
+            .invalidHostedAuthorizationURL,
+            .invalidAuthorizationParameters,
+            .invalidRedirectURI,
+            .invalidCallback,
+            .callbackMismatch,
+            .stateMismatch
+        ] {
+            let english = L10n.text(error.localizationKey, language: "en")
+            let vietnamese = L10n.text(error.localizationKey, language: "vi")
+            XCTAssertNotEqual(english, error.localizationKey)
+            XCTAssertNotEqual(vietnamese, error.localizationKey)
+            XCTAssertFalse(english.contains("state-123"))
+            XCTAssertFalse(vietnamese.contains("state-123"))
+        }
+    }
 }
