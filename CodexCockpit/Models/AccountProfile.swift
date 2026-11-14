@@ -200,13 +200,23 @@ final class AppRouter: ObservableObject {
 final class ProfileMappingStore: ObservableObject {
     @Published private(set) var mappings: [String: String]
     @Published private(set) var profiles: [WebProfile]
+    @Published private(set) var webIdentities: [String: WebAccountIdentity]
 
     private let mappingKey = "CodexCockpit.profileMappings.v1"
     private let countKey = "CodexCockpit.profileCount.v1"
+    private let identityKey = "CodexCockpit.webIdentities.v1"
+    private let defaults: UserDefaults
 
-    init() {
-        mappings = UserDefaults.standard.dictionary(forKey: mappingKey) as? [String: String] ?? [:]
-        let count = max(5, UserDefaults.standard.integer(forKey: countKey))
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        mappings = defaults.dictionary(forKey: mappingKey) as? [String: String] ?? [:]
+        if let data = defaults.data(forKey: identityKey),
+           let decoded = try? JSONDecoder().decode([String: WebAccountIdentity].self, from: data) {
+            webIdentities = decoded
+        } else {
+            webIdentities = [:]
+        }
+        let count = max(5, defaults.integer(forKey: countKey))
         profiles = (1...count).map { WebProfile(id: String($0)) }
     }
 
@@ -219,6 +229,11 @@ final class ProfileMappingStore: ObservableObject {
             if let available {
                 mappings[account.id] = available.id
                 used.insert(available.id)
+            }
+        }
+        for (profileID, identity) in webIdentities {
+            if let accountID = uniqueAccountID(matching: identity, accounts: accounts) {
+                assignMapping(accountID: accountID, to: profileID)
             }
         }
         save()
@@ -234,12 +249,48 @@ final class ProfileMappingStore: ObservableObject {
     }
 
     func assign(accountID: String, to profileID: String) {
+        assignMapping(accountID: accountID, to: profileID)
+        save()
+    }
+
+    func record(identity: WebAccountIdentity, for profileID: String, accounts: [AccountSnapshot]) {
+        webIdentities[profileID] = identity
+        if let accountID = uniqueAccountID(matching: identity, accounts: accounts) {
+            assignMapping(accountID: accountID, to: profileID)
+        }
+        save()
+    }
+
+    func displayIdentity(for account: AccountSnapshot) -> String {
+        let profileID = mappings[account.id] ?? account.id
+        if let identity = webIdentities[profileID] {
+            return identity.label
+        }
+        return Self.nonEmpty(account.displayName)
+            ?? Self.nonEmpty(account.email)
+            ?? account.name
+    }
+
+    func clearIdentity(for profileID: String) {
+        webIdentities.removeValue(forKey: profileID)
+        save()
+    }
+
+    private func assignMapping(accountID: String, to profileID: String) {
         let oldProfile = mappings[accountID]
         if let other = mappings.first(where: { $0.key != accountID && $0.value == profileID })?.key {
             if let oldProfile { mappings[other] = oldProfile } else { mappings.removeValue(forKey: other) }
         }
         mappings[accountID] = profileID
-        save()
+    }
+
+    private func uniqueAccountID(
+        matching identity: WebAccountIdentity,
+        accounts: [AccountSnapshot]
+    ) -> String? {
+        guard let email = identity.normalizedEmail else { return nil }
+        let matches = accounts.filter { $0.email?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == email }
+        return matches.count == 1 ? matches[0].id : nil
     }
 
     func addProfile(save shouldSave: Bool = true) {
@@ -249,8 +300,17 @@ final class ProfileMappingStore: ObservableObject {
     }
 
     private func save() {
-        UserDefaults.standard.set(mappings, forKey: mappingKey)
-        UserDefaults.standard.set(profiles.count, forKey: countKey)
+        defaults.set(mappings, forKey: mappingKey)
+        defaults.set(profiles.count, forKey: countKey)
+        if let data = try? JSONEncoder().encode(webIdentities) {
+            defaults.set(data, forKey: identityKey)
+        }
+    }
+
+    private static func nonEmpty(_ value: String?) -> String? {
+        guard let value else { return nil }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 }
 
