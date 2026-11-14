@@ -58,6 +58,51 @@ final class DeviceCodeAssistantTests: XCTestCase {
         XCTAssertFalse(filled)
     }
 
+    func testSubmitClicksEnabledButtonInCodeForm() async throws {
+        let webView = WKWebView()
+        let navigation = DeviceCodeNavigationWaiter()
+        webView.navigationDelegate = navigation
+        webView.loadHTMLString(
+            """
+            <html><body>
+              <form onsubmit="window.deviceCodeSubmitted = true; event.preventDefault();">
+                <input name="user_code" value="ABCD-EFGH">
+                <button type="submit">Continue</button>
+              </form>
+            </body></html>
+            """,
+            baseURL: AppURLs.deviceLogin
+        )
+        await fulfillment(of: [navigation.didFinish], timeout: 5)
+
+        let submitted = await DeviceCodeAssistant.submit(
+            in: webView,
+            attempts: 1,
+            retryDelay: .zero
+        )
+        let pageRecordedSubmit = try await webView.callAsyncJavaScript(
+            "return window.deviceCodeSubmitted === true;",
+            arguments: [:],
+            in: nil,
+            contentWorld: .page
+        ) as? Bool
+
+        XCTAssertTrue(submitted)
+        XCTAssertEqual(pageRecordedSubmit, true)
+    }
+
+    func testSubmitReturnsFalseWithoutCodeForm() async {
+        let webView = WKWebView()
+
+        let submitted = await DeviceCodeAssistant.submit(
+            in: webView,
+            attempts: 1,
+            retryDelay: .zero
+        )
+
+        XCTAssertFalse(submitted)
+    }
+
     func testBrowserKeepsCodeVisibleAfterFillAndCanRetry() {
         let browser = BrowserState()
         browser.prepareDeviceCode("abcd-efgh")

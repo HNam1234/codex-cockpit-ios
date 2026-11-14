@@ -64,7 +64,7 @@ struct PCDeviceCodeSheet: View {
             Divider().opacity(0.5)
             instructionRow(number: 2, text: "Copy Device Code mà PC hiển thị")
             Divider().opacity(0.5)
-            instructionRow(number: 3, text: "Dán code bên dưới rồi mở WebKit")
+            instructionRow(number: 3, text: "App tự điền và gửi code trong WebKit")
         }
         .padding(16)
         .glassCard(cornerRadius: 20)
@@ -98,7 +98,7 @@ struct PCDeviceCodeSheet: View {
             .background(.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 15))
 
             Button(action: openWebKit) {
-                Label("Mở WebKit và điền code", systemImage: "safari.fill")
+                Label("Tiếp tục tự động", systemImage: "wand.and.stars")
             }
             .buttonStyle(CapsuleActionStyle(tint: CockpitTheme.violet))
             .disabled(normalizedCode.isEmpty)

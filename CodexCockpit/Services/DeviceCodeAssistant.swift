@@ -61,4 +61,44 @@ enum DeviceCodeAssistant {
         }
         return false
     }
+
+    static func submit(
+        in webView: WKWebView,
+        attempts: Int = 12,
+        retryDelay: Duration = .milliseconds(150)
+    ) async -> Bool {
+        for attempt in 0..<max(1, attempts) {
+            guard !Task.isCancelled else { return false }
+            do {
+                let value = try await webView.callAsyncJavaScript(
+                    """
+                    const input = document.querySelector(
+                      'input[autocomplete="one-time-code"], input[name="user_code"], input[name*="code" i], input[id*="code" i], input[placeholder*="code" i], input[type="text"]'
+                    );
+                    if (!input) return false;
+                    const form = input.form || input.closest('form');
+                    if (!form) return false;
+                    const button = form.querySelector('button[type="submit"], input[type="submit"], button:not([type])');
+                    if (!button || button.disabled || button.getAttribute('aria-disabled') === 'true') return false;
+                    button.click();
+                    return true;
+                    """,
+                    arguments: [:],
+                    in: nil,
+                    contentWorld: .page
+                )
+                if value as? Bool == true { return true }
+            } catch {
+                // React may still be enabling the submit button after the input event.
+            }
+            if attempt + 1 < max(1, attempts) {
+                do {
+                    try await Task.sleep(for: retryDelay)
+                } catch {
+                    return false
+                }
+            }
+        }
+        return false
+    }
 }

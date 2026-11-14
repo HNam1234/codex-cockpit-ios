@@ -70,6 +70,8 @@ assert "callAsyncJavaScript" in device_code_source
 assert "Task.sleep" in device_code_source
 assert "input.focus()" in device_code_source
 assert "input.value === code" in device_code_source
+assert "button.click()" in device_code_source
+assert "DeviceCodeAssistant.submit" in (root / "CodexCockpit/Web/BrowserState.swift").read_text(encoding="utf-8")
 
 accounts_source = (root / "CodexCockpit/Views/AccountsView.swift").read_text(encoding="utf-8")
 assert "Thêm account + WebKit" in accounts_source

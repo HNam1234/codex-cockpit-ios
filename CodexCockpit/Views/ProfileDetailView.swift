@@ -292,7 +292,7 @@ struct AccountBrowserView: View {
             } label: {
                 Image(systemName: "doc.on.doc")
             }
-            Button("Điền lại") {
+            Button("Tự động lại") {
                 browser.retryDeviceCodeFill()
             }
             .font(.caption.weight(.bold))
