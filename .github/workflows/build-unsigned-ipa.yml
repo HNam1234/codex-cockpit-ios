@@ -92,10 +92,25 @@ jobs:
           cp -R .build/DerivedData/Build/Products/Release-iphoneos/CodexCockpit.app .build/Payload/
           cd .build
           zip -qry CodexCockpit-unsigned.ipa Payload
+      - name: Encrypt personalized IPA on public runners
+        if: github.event.repository.private == false
+        run: |
+          openssl cms -encrypt -binary -aes-256-cbc \
+            -in .build/CodexCockpit-unsigned.ipa \
+            -out .build/CodexCockpit-unsigned.ipa.cms \
+            -outform DER \
+            .github/ci-artifact-recipient.pem
       - uses: actions/upload-artifact@v4
+        if: github.event.repository.private == true
         with:
           name: CodexCockpit-unsigned
           path: .build/CodexCockpit-unsigned.ipa
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: github.event.repository.private == false
+        with:
+          name: CodexCockpit-unsigned-encrypted
+          path: .build/CodexCockpit-unsigned.ipa.cms
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
