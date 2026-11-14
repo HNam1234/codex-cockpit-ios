@@ -45,4 +45,3 @@ For TIBO, the chosen approach combines a richer in-app card with optional local 
 - Clearing a WebKit session also clears its cached identity.
 - While active, the app reloads status at a clamped 60–3600 second interval. Re-entering the foreground starts with an immediate load.
 - TIBO alerts are generated only for non-stale `likely` or `yes` signals. A stable identifier made from status and post/event identity prevents repeated notifications; a `likely` signal that becomes `yes` can notify again.
-

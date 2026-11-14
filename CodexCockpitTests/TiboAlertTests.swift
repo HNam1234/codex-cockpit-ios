@@ -60,6 +60,32 @@ final class TiboAlertTests: XCTestCase {
         XCTAssertNotEqual(likely?.identifier, confirmed?.identifier)
     }
 
+    func testDeliveredHistoryRejectsAlternatingDuplicateAfterEscalation() throws {
+        var history = TiboAlertHistory()
+
+        XCTAssertTrue(history.insert("tibo.likely.post-a"))
+        XCTAssertTrue(history.insert("tibo.yes.post-a"))
+        XCTAssertFalse(history.insert("tibo.likely.post-a"))
+
+        let restored = try JSONDecoder().decode(
+            TiboAlertHistory.self,
+            from: JSONEncoder().encode(history)
+        )
+        XCTAssertTrue(restored.contains("tibo.likely.post-a"))
+        XCTAssertTrue(restored.contains("tibo.yes.post-a"))
+    }
+
+    func testDeliveredHistoryStaysBounded() {
+        var history = TiboAlertHistory(limit: 3)
+        XCTAssertTrue(history.insert("one"))
+        XCTAssertTrue(history.insert("two"))
+        XCTAssertTrue(history.insert("three"))
+        XCTAssertTrue(history.insert("four"))
+
+        XCTAssertFalse(history.contains("one"))
+        XCTAssertTrue(history.contains("four"))
+    }
+
     private func post(id: String, text: String) -> TiboResetStatus.Post {
         TiboResetStatus.Post(
             text: text,

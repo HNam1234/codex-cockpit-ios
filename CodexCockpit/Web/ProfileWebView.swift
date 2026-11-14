@@ -145,31 +145,10 @@ struct ProfileWebView: UIViewRepresentable {
 
         private func probeChatGPTIdentity(in webView: WKWebView) {
             guard webView.url?.host?.lowercased() == AppURLs.chatGPT.host else { return }
-            let script = """
-            (async () => {
-              try {
-                const response = await fetch('/api/auth/session', {
-                  credentials: 'same-origin',
-                  cache: 'no-store'
-                });
-                if (!response.ok) return null;
-                const session = await response.json();
-                const user = session && session.user;
-                if (!user) return null;
-                const name = typeof user.name === 'string' ? user.name.trim() : '';
-                const email = typeof user.email === 'string' ? user.email.trim() : '';
-                if (!name && !email) return null;
-                return { name: name || null, email: email || null };
-              } catch (_) {
-                return null;
-              }
-            })();
-            """
-            webView.evaluateJavaScript(script) { [weak self] value, _ in
-                guard let identity = WebAccountIdentity(javaScriptValue: value) else { return }
-                Task { @MainActor [weak self] in
-                    self?.onIdentityDetected?(identity)
-                }
+            Task { @MainActor [weak self, weak webView] in
+                guard let webView,
+                      let identity = await WebIdentityBridge.detectChatGPTSession(in: webView) else { return }
+                self?.onIdentityDetected?(identity)
             }
         }
     }

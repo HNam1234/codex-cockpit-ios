@@ -97,4 +97,3 @@
 - [ ] Redesign the TIBO card to show status, freshness, source link, and probability context without hiding the account list.
 - [ ] Extend static verification for the new privacy and notification boundaries.
 - [ ] Run all available unit/UI tests, project verification, and inspect the final diff for secrets and accidental WebKit identifier changes.
-

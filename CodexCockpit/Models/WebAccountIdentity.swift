@@ -20,12 +20,6 @@ struct WebAccountIdentity: Codable, Equatable {
         )
     }
 
-    init?(sessionJavaScriptValue: Any?) {
-        guard let session = sessionJavaScriptValue as? [String: Any],
-              let user = session["user"] as? [String: Any] else { return nil }
-        self.init(javaScriptValue: user)
-    }
-
     var label: String {
         name ?? email ?? ""
     }

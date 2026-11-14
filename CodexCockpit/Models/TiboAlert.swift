@@ -7,6 +7,29 @@ struct TiboAlertContent: Equatable {
     let body: String
 }
 
+struct TiboAlertHistory: Codable, Equatable {
+    private(set) var identifiers: [String]
+    let limit: Int
+
+    init(limit: Int = 32) {
+        identifiers = []
+        self.limit = max(1, limit)
+    }
+
+    func contains(_ identifier: String) -> Bool {
+        identifiers.contains(identifier)
+    }
+
+    mutating func insert(_ identifier: String) -> Bool {
+        guard !contains(identifier) else { return false }
+        identifiers.append(identifier)
+        if identifiers.count > limit {
+            identifiers.removeFirst(identifiers.count - limit)
+        }
+        return true
+    }
+}
+
 enum TiboAlertPolicy {
     static func content(for signal: TiboResetStatus) -> TiboAlertContent? {
         guard !signal.stale else { return nil }

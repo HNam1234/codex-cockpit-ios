@@ -49,15 +49,6 @@ final class WebIdentityScanner: ObservableObject {
         }
         defer { webView.stopLoading() }
 
-        let value: Any?
-        do {
-            value = try await webView.evaluateJavaScript("document.body.innerText")
-        } catch {
-            return nil
-        }
-        guard let json = value as? String,
-              let data = json.data(using: .utf8),
-              let payload = try? JSONSerialization.jsonObject(with: data) else { return nil }
-        return WebAccountIdentity(sessionJavaScriptValue: payload)
+        return await WebIdentityBridge.identityFromSessionDocument(in: webView)
     }
 }

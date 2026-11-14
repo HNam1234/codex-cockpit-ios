@@ -9,10 +9,11 @@ final class TiboNotificationManager: NSObject, ObservableObject, UNUserNotificat
     @Published private(set) var permissionDenied = false
 
     private let enabledKey = "CodexCockpit.tiboNotifications.enabled.v1"
-    private let lastAlertKey = "CodexCockpit.tiboNotifications.lastAlert.v1"
+    private let historyKey = "CodexCockpit.tiboNotifications.history.v1"
     private let defaults: UserDefaults
     private let center: UNUserNotificationCenter
     private var pendingIdentifiers: Set<String> = []
+    private var history: TiboAlertHistory
 
     init(
         defaults: UserDefaults = .standard,
@@ -20,6 +21,12 @@ final class TiboNotificationManager: NSObject, ObservableObject, UNUserNotificat
     ) {
         self.defaults = defaults
         self.center = center
+        if let data = defaults.data(forKey: historyKey),
+           let restored = try? JSONDecoder().decode(TiboAlertHistory.self, from: data) {
+            history = restored
+        } else {
+            history = TiboAlertHistory()
+        }
         isEnabled = defaults.bool(forKey: enabledKey)
         super.init()
         center.delegate = self
@@ -48,7 +55,7 @@ final class TiboNotificationManager: NSObject, ObservableObject, UNUserNotificat
         guard isEnabled,
               let signal,
               let alert = TiboAlertPolicy.content(for: signal),
-              defaults.string(forKey: lastAlertKey) != alert.identifier,
+              !history.contains(alert.identifier),
               pendingIdentifiers.insert(alert.identifier).inserted else { return }
 
         let content = UNMutableNotificationContent()
@@ -61,8 +68,9 @@ final class TiboNotificationManager: NSObject, ObservableObject, UNUserNotificat
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 self.pendingIdentifiers.remove(alert.identifier)
-                if error == nil {
-                    self.defaults.set(alert.identifier, forKey: self.lastAlertKey)
+                if error == nil, self.history.insert(alert.identifier),
+                   let data = try? JSONEncoder().encode(self.history) {
+                    self.defaults.set(data, forKey: self.historyKey)
                 }
             }
         }

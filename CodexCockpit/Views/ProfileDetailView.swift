@@ -209,6 +209,7 @@ private struct MappingPicker: View {
 struct AccountBrowserView: View {
     let accountID: String
     let launch: BrowserLaunch
+    let profileBinding: BrowserProfileBinding
     @EnvironmentObject private var store: CockpitStore
     @EnvironmentObject private var mappings: ProfileMappingStore
     @StateObject private var browser = BrowserState()
@@ -217,7 +218,7 @@ struct AccountBrowserView: View {
     @State private var webViewGeneration = UUID()
 
     var body: some View {
-        let profile = mappings.profile(for: accountID)
+        let profile = profileBinding.profile(in: mappings)
         VStack(spacing: 0) {
             ZStack(alignment: .top) {
                 ProfileWebView(

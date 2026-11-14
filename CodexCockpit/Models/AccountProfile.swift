@@ -26,6 +26,20 @@ struct WebProfile: Identifiable, Hashable, Codable {
     }
 }
 
+struct BrowserProfileBinding: Hashable {
+    let profileID: String
+
+    @MainActor
+    init(accountID: String, mappings: ProfileMappingStore) {
+        profileID = mappings.profile(for: accountID).id
+    }
+
+    @MainActor
+    func profile(in mappings: ProfileMappingStore) -> WebProfile {
+        mappings.profile(id: profileID)
+    }
+}
+
 struct QuotaWindow: Decodable, Hashable, Identifiable {
     let label: String
     let remainingPercent: Double
@@ -241,7 +255,11 @@ final class ProfileMappingStore: ObservableObject {
 
     func profile(for accountID: String) -> WebProfile {
         let profileID = mappings[accountID] ?? accountID
-        return profiles.first(where: { $0.id == profileID }) ?? WebProfile(id: profileID)
+        return profile(id: profileID)
+    }
+
+    func profile(id profileID: String) -> WebProfile {
+        profiles.first(where: { $0.id == profileID }) ?? WebProfile(id: profileID)
     }
 
     func mappedAccountID(for profileID: String) -> String? {

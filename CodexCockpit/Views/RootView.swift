@@ -68,7 +68,11 @@ struct RootView: View {
         case .accountDetail(let accountID):
             AccountDetailView(accountID: accountID)
         case .browser(let accountID, let launch):
-            AccountBrowserView(accountID: accountID, launch: launch)
+            AccountBrowserView(
+                accountID: accountID,
+                launch: launch,
+                profileBinding: BrowserProfileBinding(accountID: accountID, mappings: mappings)
+            )
         }
     }
 }
