@@ -232,6 +232,9 @@ struct AccountBrowserView: View {
                 .id(webViewGeneration)
                 if browser.isLoading { ProgressView(value: browser.progress).progressViewStyle(.linear) }
             }
+            if let code = browser.deviceCode {
+                deviceCodeBar(code)
+            }
             Divider()
             HStack {
                 Button { browser.goBack() } label: { Image(systemName: "chevron.backward") }.disabled(!browser.canGoBack)
@@ -259,14 +262,18 @@ struct AccountBrowserView: View {
         }
         .onAppear {
             if let code = launch.code {
-                browser.pendingDeviceCode = code
-                UIPasteboard.general.string = code
+                browser.prepareDeviceCode(code)
+                UIPasteboard.general.string = DeviceCodeAssistant.normalized(code)
             }
+        }
+        .onChange(of: store.loginSessions[accountID]?.status) { _, status in
+            if status == "succeeded" { browser.clearDeviceCode() }
         }
         .sheet(isPresented: $showingCodeEntry) {
             DeviceCodeSheet { code in
-                if !code.isEmpty { UIPasteboard.general.string = code }
-                browser.openDeviceLogin(code: code)
+                let normalized = DeviceCodeAssistant.normalized(code)
+                if !normalized.isEmpty { UIPasteboard.general.string = normalized }
+                browser.openDeviceLogin(code: normalized)
                 showingCodeEntry = false
             }
             .presentationDetents([.medium])
@@ -287,6 +294,30 @@ struct AccountBrowserView: View {
     private var initialURL: URL {
         if let value = launch.verificationURL, let url = URL(string: value) { return url }
         return launch.mode == .device ? AppURLs.deviceLogin : AppURLs.chatGPT
+    }
+
+    private func deviceCodeBar(_ code: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "key.horizontal.fill").foregroundStyle(CockpitTheme.violet)
+            VStack(alignment: .leading, spacing: 1) {
+                Text("DEVICE CODE").font(.system(size: 9, weight: .heavy)).foregroundStyle(.secondary)
+                Text(code).font(.subheadline.monospaced().weight(.bold)).textSelection(.enabled)
+            }
+            Spacer()
+            Button {
+                UIPasteboard.general.string = code
+            } label: {
+                Image(systemName: "doc.on.doc")
+            }
+            Button("Điền lại") {
+                browser.retryDeviceCodeFill()
+            }
+            .font(.caption.weight(.bold))
+        }
+        .padding(.horizontal, 14).padding(.vertical, 9)
+        .background(.thinMaterial)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Device code \(code)")
     }
 }
 

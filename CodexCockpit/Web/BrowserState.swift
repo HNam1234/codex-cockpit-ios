@@ -10,10 +10,12 @@ final class BrowserState: ObservableObject {
     @Published var isLoading = false
     @Published var progress = 0.0
     @Published var errorMessage: String?
+    @Published private(set) var deviceCode: String?
 
     weak var webView: WKWebView?
     var pendingRequest: URLRequest?
     var pendingDeviceCode: String?
+    private var deviceCodeFillTask: Task<Void, Never>?
 
     func open(_ url: URL) {
         errorMessage = nil
@@ -34,8 +36,59 @@ final class BrowserState: ObservableObject {
     }
 
     func openDeviceLogin(code: String) {
-        pendingDeviceCode = code.isEmpty ? nil : code
+        prepareDeviceCode(code)
         open(AppURLs.deviceLogin)
+    }
+
+    func prepareDeviceCode(_ rawCode: String) {
+        let code = DeviceCodeAssistant.normalized(rawCode)
+        deviceCode = code.isEmpty ? nil : code
+        pendingDeviceCode = deviceCode
+        if let webView,
+           webView.url?.host == AppURLs.deviceLogin.host,
+           webView.url?.path.hasPrefix(AppURLs.deviceLogin.path) == true,
+           !webView.isLoading {
+            fillPendingDeviceCode(in: webView)
+        }
+    }
+
+    func markDeviceCodeFilled(_ code: String) {
+        guard pendingDeviceCode == code else { return }
+        pendingDeviceCode = nil
+    }
+
+    func clearDeviceCode() {
+        cancelDeviceCodeFill()
+        deviceCode = nil
+        pendingDeviceCode = nil
+    }
+
+    func fillPendingDeviceCode(in webView: WKWebView) {
+        guard let code = pendingDeviceCode else { return }
+        deviceCodeFillTask?.cancel()
+        deviceCodeFillTask = Task { @MainActor [weak self, weak webView] in
+            guard let self, let webView else { return }
+            if await DeviceCodeAssistant.fill(code, in: webView) {
+                self.markDeviceCodeFilled(code)
+            }
+        }
+    }
+
+    func retryDeviceCodeFill() {
+        guard let code = deviceCode else { return }
+        pendingDeviceCode = code
+        if let webView,
+           webView.url?.host == AppURLs.deviceLogin.host,
+           webView.url?.path.hasPrefix(AppURLs.deviceLogin.path) == true {
+            fillPendingDeviceCode(in: webView)
+        } else {
+            open(AppURLs.deviceLogin)
+        }
+    }
+
+    func cancelDeviceCodeFill() {
+        deviceCodeFillTask?.cancel()
+        deviceCodeFillTask = nil
     }
 
     func goBack() { webView?.goBack() }

@@ -61,6 +61,12 @@ assert "callAsyncJavaScript" in bridge_source
 assert "/api/auth/session" in bridge_source
 assert "return name || email ? { name: name || null, email: email || null } : null" in bridge_source
 
+device_code_source = (root / "CodexCockpit/Services/DeviceCodeAssistant.swift").read_text(encoding="utf-8")
+assert "callAsyncJavaScript" in device_code_source
+assert "Task.sleep" in device_code_source
+assert "input.focus()" in device_code_source
+assert "input.value === code" in device_code_source
+
 for path in (root / "CodexCockpit/Assets.xcassets").rglob("Contents.json"):
     json.loads(path.read_text(encoding="utf-8"))
 

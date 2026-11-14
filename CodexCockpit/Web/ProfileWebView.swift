@@ -73,6 +73,7 @@ struct ProfileWebView: UIViewRepresentable {
         }
 
         func stopObserving(_ webView: WKWebView) {
+            state.cancelDeviceCodeFill()
             observations.forEach { $0.invalidate() }
             observations.removeAll()
         }
@@ -122,25 +123,8 @@ struct ProfileWebView: UIViewRepresentable {
             probeChatGPTIdentity(in: webView)
             guard webView.url?.host == AppURLs.deviceLogin.host,
                   webView.url?.path.hasPrefix(AppURLs.deviceLogin.path) == true,
-                  let code = state.pendingDeviceCode else { return }
-            state.pendingDeviceCode = nil
-
-            let encoded = code
-                .replacingOccurrences(of: "\\", with: "\\\\")
-                .replacingOccurrences(of: "'", with: "\\'")
-            let script = """
-            (() => {
-              const input = document.querySelector('input[autocomplete="one-time-code"], input[name*="code" i], input[id*="code" i], input[type="text"]');
-              if (!input) return false;
-              const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
-              setter.call(input, '\(encoded)');
-              input.dispatchEvent(new Event('input', { bubbles: true }));
-              input.dispatchEvent(new Event('change', { bubbles: true }));
-              input.focus();
-              return true;
-            })();
-            """
-            webView.evaluateJavaScript(script)
+                  state.pendingDeviceCode != nil else { return }
+            state.fillPendingDeviceCode(in: webView)
         }
 
         private func probeChatGPTIdentity(in webView: WKWebView) {
