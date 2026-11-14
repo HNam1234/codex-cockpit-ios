@@ -20,16 +20,27 @@ final class WebIdentityBridgeTests: XCTestCase {
 
     func testSessionDocumentBridgeReturnsOnlySanitizedIdentity() async {
         let webView = WKWebView()
+        let navigation = NavigationWaiter()
+        webView.navigationDelegate = navigation
         webView.loadHTMLString(
             """
             <html><body>{"user":{"name":" Safe User ","email":" safe@example.com "},"accessToken":"must-not-cross"}</body></html>
             """,
             baseURL: AppURLs.chatGPT
         )
-        try? await Task.sleep(for: .milliseconds(200))
+        await fulfillment(of: [navigation.didFinish], timeout: 5)
 
         let identity = await WebIdentityBridge.identityFromSessionDocument(in: webView)
 
         XCTAssertEqual(identity, WebAccountIdentity(name: "Safe User", email: "safe@example.com"))
+    }
+}
+
+@MainActor
+private final class NavigationWaiter: NSObject, WKNavigationDelegate {
+    let didFinish = XCTestExpectation(description: "WebView navigation finished")
+
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        didFinish.fulfill()
     }
 }
