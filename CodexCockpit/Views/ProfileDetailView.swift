@@ -52,16 +52,16 @@ struct AccountDetailView: View {
         } message: { Text(resetMessage ?? "") }
         .sheet(isPresented: $showingDeviceAuthorization) {
             if let account = store.account(id: accountID) {
-                DeviceAuthorizationSheet(
+                PCDeviceCodeSheet(
                     accountID: accountID,
                     accountName: mappings.displayIdentity(for: account)
-                ) { session in
+                ) { code in
                     router.openBrowser(
                         accountID: accountID,
                         launch: BrowserLaunch(
                             mode: .device,
-                            code: session.userCode,
-                            verificationURL: session.verificationURL
+                            code: code,
+                            verificationURL: AppURLs.deviceLogin.absoluteString
                         )
                     )
                 }
@@ -134,7 +134,7 @@ struct AccountDetailView: View {
                 actionTile("Cập nhật", icon: "arrow.clockwise", tint: .blue) {
                     Task { await store.refresh(accountID: accountID) }
                 }
-                actionTile("Device code", icon: "key.horizontal.fill", tint: CockpitTheme.violet) {
+                actionTile("Nhập code PC", icon: "key.horizontal.fill", tint: CockpitTheme.violet) {
                     showingDeviceAuthorization = true
                 }
                 if account.resetCredits > 0, store.capabilities?.resetCredit == true {
@@ -251,9 +251,6 @@ struct AccountBrowserView: View {
                 browser.prepareDeviceCode(code)
                 UIPasteboard.general.string = DeviceCodeAssistant.normalized(code)
             }
-        }
-        .onChange(of: store.loginSessions[accountID]?.status) { _, status in
-            if status == "succeeded" { browser.clearDeviceCode() }
         }
         .sheet(isPresented: $showingCodeEntry) {
             DeviceCodeSheet { code in

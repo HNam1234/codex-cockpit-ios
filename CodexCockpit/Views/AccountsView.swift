@@ -47,17 +47,17 @@ struct AccountsView: View {
             .presentationDetents([.medium])
         }
         .sheet(item: $authorizationAccount) { account in
-            DeviceAuthorizationSheet(
+            PCDeviceCodeSheet(
                 accountID: account.id,
                 accountName: mappings.displayIdentity(for: account),
-                previewSession: previewSession(for: account)
-            ) { session in
+                previewCode: previewCode
+            ) { code in
                 router.openBrowser(
                     accountID: account.id,
                     launch: BrowserLaunch(
                         mode: .device,
-                        code: session.userCode,
-                        verificationURL: session.verificationURL
+                        code: code,
+                        verificationURL: AppURLs.deviceLogin.absoluteString
                     )
                 )
             }
@@ -111,7 +111,7 @@ struct AccountsView: View {
         ContentUnavailableView {
             Label("Chưa có tài khoản", systemImage: "person.crop.circle.badge.plus")
         } description: {
-            Text("Thêm account để tạo WebKit riêng và lấy device code đăng nhập.")
+            Text("Thêm account để tạo WebKit riêng rồi nhập Device Code từ PC.")
         }
         .frame(maxWidth: .infinity).padding(.vertical, 30).glassCard()
     }
@@ -165,7 +165,7 @@ struct AccountsView: View {
                 .buttonStyle(CompactAccountActionStyle(tint: .blue))
 
                 Button { authorizationAccount = account } label: {
-                    Label("Device code", systemImage: "key.horizontal.fill")
+                    Label("Code từ PC", systemImage: "key.horizontal.fill")
                 }
                 .buttonStyle(CompactAccountActionStyle(tint: CockpitTheme.violet))
                 .disabled(busy)
@@ -214,18 +214,10 @@ struct AccountsView: View {
         return text.hasPrefix("Còn ") ? String(text.dropFirst(4)) : text
     }
 
-    private func previewSession(for account: AccountSnapshot) -> LoginSession? {
-        guard ProcessInfo.processInfo.environment["PREVIEW_DEVICE_SHEET"] == "1" else { return nil }
-        return LoginSession(
-            sessionID: "preview",
-            accountID: account.id,
-            status: "pending",
-            verificationURL: AppURLs.deviceLogin.absoluteString,
-            userCode: "ABCD-EFGH",
-            expiresAt: Int(Date.now.timeIntervalSince1970) + 900,
-            error: nil,
-            account: nil
-        )
+    private var previewCode: String? {
+        ProcessInfo.processInfo.environment["PREVIEW_DEVICE_SHEET"] == "1"
+            ? "ABCD-EFGH"
+            : nil
     }
 }
 
@@ -249,13 +241,13 @@ private struct NewAccountSheet: View {
                 } label: {
                     HStack {
                         if isCreating { ProgressView().tint(.white) }
-                        Label("Tạo và lấy device code", systemImage: "key.horizontal.fill")
+                        Label("Tạo và nhập code PC", systemImage: "key.horizontal.fill")
                     }
                     .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(CapsuleActionStyle(tint: CockpitTheme.accent))
                 .disabled(isCreating)
-                Text("Mã sẽ được copy, tự điền trong WebKit và giữ lại trên thanh hỗ trợ. Bạn chỉ cần xác nhận trên trang OpenAI.")
+                Text("Sau khi tạo, nhập Device Code đang hiện trên PC. App sẽ mở đúng WebKit và tự điền mã cục bộ.")
                     .font(.caption).foregroundStyle(.secondary)
                 Spacer()
             }

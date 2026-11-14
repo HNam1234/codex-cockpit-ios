@@ -1,17 +1,19 @@
 import SwiftUI
 import UIKit
 
-struct DeviceAuthorizationSheet: View {
+struct PCDeviceCodeSheet: View {
     let accountID: String
     let accountName: String
-    var previewSession: LoginSession? = nil
-    let onOpen: (LoginSession) -> Void
+    var previewCode: String? = nil
+    let onOpen: (String) -> Void
 
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var store: CockpitStore
-    @State private var copied = false
+    @FocusState private var codeFieldFocused: Bool
+    @State private var code = ""
 
-    private var session: LoginSession? { previewSession ?? store.loginSessions[accountID] }
+    private var normalizedCode: String {
+        DeviceCodeAssistant.normalized(code)
+    }
 
     var body: some View {
         NavigationStack {
@@ -20,13 +22,14 @@ struct DeviceAuthorizationSheet: View {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 18) {
                         header
-                        authorizationCard
+                        instructionsCard
+                        codeCard
                         privacyNote
                     }
                     .padding(18)
                 }
             }
-            .navigationTitle("Đăng nhập nhanh")
+            .navigationTitle("Nhập code từ PC")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar {
@@ -35,170 +38,100 @@ struct DeviceAuthorizationSheet: View {
                 }
             }
         }
-        .task(id: accountID) { await startIfNeeded() }
-        .onChange(of: session?.userCode, initial: true) { _, code in
-            guard let code, !code.isEmpty else { return }
-            UIPasteboard.general.string = code
-            copied = true
-        }
-        .onChange(of: session?.status) { _, status in
-            guard status == "succeeded" else { return }
-            Task {
-                try? await Task.sleep(for: .milliseconds(850))
-                dismiss()
+        .onAppear {
+            if let previewCode {
+                code = DeviceCodeAssistant.normalized(previewCode)
+            } else {
+                codeFieldFocused = true
             }
         }
     }
 
     private var header: some View {
         VStack(spacing: 9) {
-            ProfileArtwork(seed: accountID, symbol: "key.horizontal.fill", size: 72)
+            ProfileArtwork(seed: accountID, symbol: "desktopcomputer", size: 72)
             Text(accountName).font(.title3.weight(.bold)).lineLimit(1)
-            Text("Mã này chỉ dành cho WebKit của account trên")
+            Text("Code sẽ được điền vào WebKit riêng của account này")
                 .font(.caption).foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
     }
 
-    @ViewBuilder
-    private var authorizationCard: some View {
-        VStack(spacing: 16) {
-            if let session {
-                statusHeader(session)
-                if let code = session.userCode, !code.isEmpty {
-                    Text(code)
-                        .font(.system(size: 30, weight: .heavy, design: .monospaced))
-                        .minimumScaleFactor(0.7)
-                        .lineLimit(1)
-                        .textSelection(.enabled)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 5)
+    private var instructionsCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            instructionRow(number: 1, text: "Trên PC chạy codex login --device-auth")
+            Divider().opacity(0.5)
+            instructionRow(number: 2, text: "Copy Device Code mà PC hiển thị")
+            Divider().opacity(0.5)
+            instructionRow(number: 3, text: "Dán code bên dưới rồi mở WebKit")
+        }
+        .padding(16)
+        .glassCard(cornerRadius: 20)
+    }
 
-                    HStack(spacing: 10) {
-                        Button {
-                            UIPasteboard.general.string = code
-                            copied = true
-                        } label: {
-                            Label(copied ? "Đã sao chép" : "Sao chép", systemImage: copied ? "checkmark" : "doc.on.doc")
-                        }
-                        .buttonStyle(QuickDeviceActionStyle(tint: .blue))
-
-                        Button {
-                            dismiss()
-                            DispatchQueue.main.async { onOpen(session) }
-                        } label: {
-                            Label("Mở WebKit", systemImage: "safari.fill")
-                        }
-                        .buttonStyle(QuickDeviceActionStyle(tint: CockpitTheme.violet))
+    private var codeCard: some View {
+        VStack(spacing: 14) {
+            HStack(spacing: 10) {
+                Image(systemName: "key.horizontal.fill")
+                    .foregroundStyle(CockpitTheme.violet)
+                TextField("ABCD-EFGH", text: $code)
+                    .focused($codeFieldFocused)
+                    .textInputAutocapitalization(.characters)
+                    .autocorrectionDisabled()
+                    .font(.system(size: 24, weight: .heavy, design: .monospaced))
+                    .submitLabel(.go)
+                    .onChange(of: code) { _, value in
+                        let normalized = DeviceCodeAssistant.normalized(value)
+                        if value != normalized { code = normalized }
                     }
+                    .onSubmit { openWebKit() }
+                Button {
+                    code = DeviceCodeAssistant.normalized(UIPasteboard.general.string ?? "")
+                } label: {
+                    Image(systemName: "doc.on.clipboard.fill")
+                        .font(.title3)
                 }
-
-                if session.status == "failed" || session.expiresAt <= Int(Date.now.timeIntervalSince1970) {
-                    Button {
-                        Task { await store.beginReauthorization(accountID: accountID) }
-                    } label: {
-                        Label("Tạo mã mới", systemImage: "arrow.clockwise")
-                    }
-                    .buttonStyle(CapsuleActionStyle(tint: CockpitTheme.accent))
-                }
-
-                if let error = session.error, !error.isEmpty {
-                    Text(error).font(.caption).foregroundStyle(.red)
-                }
-            } else {
-                ProgressView("Đang lấy device code…")
-                    .frame(maxWidth: .infinity).padding(.vertical, 34)
+                .accessibilityLabel("Dán code từ clipboard")
             }
+            .padding(14)
+            .background(.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 15))
+
+            Button(action: openWebKit) {
+                Label("Mở WebKit và điền code", systemImage: "safari.fill")
+            }
+            .buttonStyle(CapsuleActionStyle(tint: CockpitTheme.violet))
+            .disabled(normalizedCode.isEmpty)
         }
         .padding(18)
         .glassCard(cornerRadius: 22)
     }
 
-    private func statusHeader(_ session: LoginSession) -> some View {
-        HStack(spacing: 9) {
-            Image(systemName: statusIcon(session.status))
-                .foregroundStyle(statusColor(session.status))
-            VStack(alignment: .leading, spacing: 2) {
-                Text(statusTitle(session.status)).font(.subheadline.weight(.bold))
-                if session.status != "succeeded" {
-                    TimelineView(.periodic(from: .now, by: 1)) { context in
-                        Text(expirationText(session.expiresAt, now: context.date))
-                            .font(.caption2).foregroundStyle(.secondary)
-                    }
-                }
-            }
-            Spacer()
-            if session.status != "succeeded" && session.status != "failed" {
-                ProgressView().controlSize(.small)
-            }
-        }
-    }
-
     private var privacyNote: some View {
         Label(
-            "App tự kiểm tra trạng thái mỗi 2 giây. Cookie vẫn nằm trong sandbox WebKit và không được gửi lên VPS.",
+            "Device Code chỉ được chuyển cục bộ vào WebKit trên iPhone. App không gửi mã này lên VPS.",
             systemImage: "lock.shield.fill"
         )
         .font(.caption).foregroundStyle(.secondary)
         .padding(.horizontal, 6)
     }
 
-    private func startIfNeeded() async {
-        guard previewSession == nil else { return }
-        let now = Int(Date.now.timeIntervalSince1970)
-        if let session,
-           session.status != "succeeded",
-           session.status != "failed",
-           session.expiresAt > now {
-            return
-        }
-        await store.beginReauthorization(accountID: accountID)
-    }
-
-    private func statusTitle(_ status: String) -> String {
-        switch status {
-        case "succeeded": "Đăng nhập thành công"
-        case "failed": "Không thể đăng nhập"
-        case "expired": "Mã đã hết hạn"
-        default: "Đang chờ xác nhận"
+    private func instructionRow(number: Int, text: String) -> some View {
+        HStack(spacing: 11) {
+            Text("\(number)")
+                .font(.caption.weight(.heavy))
+                .foregroundStyle(.white)
+                .frame(width: 24, height: 24)
+                .background(CockpitTheme.violet, in: Circle())
+            Text(text).font(.subheadline.weight(.semibold))
+            Spacer(minLength: 0)
         }
     }
 
-    private func statusIcon(_ status: String) -> String {
-        switch status {
-        case "succeeded": "checkmark.circle.fill"
-        case "failed", "expired": "xmark.circle.fill"
-        default: "clock.badge.checkmark.fill"
-        }
-    }
-
-    private func statusColor(_ status: String) -> Color {
-        switch status {
-        case "succeeded": .green
-        case "failed", "expired": .red
-        default: CockpitTheme.violet
-        }
-    }
-
-    private func expirationText(_ expiresAt: Int, now: Date) -> String {
-        let remaining = max(0, expiresAt - Int(now.timeIntervalSince1970))
-        return remaining > 0
-            ? "Mã còn hiệu lực \(remaining / 60):\(String(format: "%02d", remaining % 60))"
-            : "Mã đã hết hạn"
-    }
-}
-
-private struct QuickDeviceActionStyle: ButtonStyle {
-    let tint: Color
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.caption.weight(.bold))
-            .foregroundStyle(tint)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .background(tint.opacity(configuration.isPressed ? 0.2 : 0.11), in: Capsule())
-            .scaleEffect(configuration.isPressed ? 0.97 : 1)
-            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+    private func openWebKit() {
+        let normalized = normalizedCode
+        guard !normalized.isEmpty else { return }
+        dismiss()
+        DispatchQueue.main.async { onOpen(normalized) }
     }
 }

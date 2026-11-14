@@ -73,10 +73,16 @@ assert "input.value === code" in device_code_source
 
 accounts_source = (root / "CodexCockpit/Views/AccountsView.swift").read_text(encoding="utf-8")
 assert "Thêm account + WebKit" in accounts_source
-assert "Device code" in accounts_source
+assert "Code từ PC" in accounts_source
+assert "beginReauthorization" not in accounts_source
 assert "ProfileDataStore.clear" in accounts_source
 assert "AccountQuotaSnapshot" in accounts_source
 assert "window.remainingPercent" in accounts_source
+
+pc_code_source = (root / "CodexCockpit/Views/DeviceAuthorizationSheet.swift").read_text(encoding="utf-8")
+assert "codex login --device-auth" in pc_code_source
+assert "App không gửi mã này lên VPS" in pc_code_source
+assert "beginReauthorization" not in pc_code_source
 
 api_source = (root / "CodexCockpit/Services/CockpitAPI.swift").read_text(encoding="utf-8")
 assert "app-account/create" in api_source
