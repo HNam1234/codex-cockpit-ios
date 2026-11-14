@@ -28,6 +28,19 @@ final class ProfileMappingTests: XCTestCase {
         XCTAssertNil(WebAccountIdentity(name: " \n ", email: "\t"))
     }
 
+    func testJavaScriptIdentityPayloadParsesOnlyStringNameAndEmail() {
+        let identity = WebAccountIdentity(javaScriptValue: [
+            "name": "  Alice  ",
+            "email": " alice@example.com "
+        ])
+
+        XCTAssertEqual(identity?.name, "Alice")
+        XCTAssertEqual(identity?.email, "alice@example.com")
+        XCTAssertNil(WebAccountIdentity(javaScriptValue: "alice@example.com"))
+        XCTAssertNil(WebAccountIdentity(javaScriptValue: ["name": 42, "email": false]))
+        XCTAssertNil(WebAccountIdentity(javaScriptValue: ["name": " ", "email": "\n"]))
+    }
+
     func testUniqueCaseInsensitiveEmailMatchSwapsExistingMappings() {
         let store = ProfileMappingStore(defaults: defaults)
         let first = account(id: "1", name: "Codex 1", email: "first@example.com")

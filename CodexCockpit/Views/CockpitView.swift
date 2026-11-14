@@ -3,6 +3,7 @@ import SwiftUI
 struct CockpitView: View {
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var store: CockpitStore
+    @EnvironmentObject private var mappings: ProfileMappingStore
 
     var body: some View {
         Group {
@@ -66,7 +67,10 @@ struct CockpitView: View {
                 LazyVStack(spacing: 8) {
                     ForEach(store.accounts) { account in
                         Button { router.showAccount(account.id) } label: {
-                            AccountOverviewCard(account: account)
+                            AccountOverviewCard(
+                                account: account,
+                                displayIdentity: mappings.displayIdentity(for: account)
+                            )
                         }
                         .buttonStyle(.plain)
                     }
@@ -138,12 +142,13 @@ struct TiboResetBanner: View {
 
 struct AccountOverviewCard: View {
     let account: AccountSnapshot
+    let displayIdentity: String
 
     var body: some View {
         HStack(spacing: 9) {
             ProfileArtwork(seed: account.id, symbol: account.ok ? "command" : "exclamationmark", size: 42)
             VStack(alignment: .leading, spacing: 3) {
-                Text(account.identity).font(.subheadline.weight(.bold)).lineLimit(1)
+                Text(displayIdentity).font(.subheadline.weight(.bold)).lineLimit(1)
                 Text([account.name, account.plan?.uppercased()].compactMap { $0 }.joined(separator: " · "))
                     .font(.caption2.weight(.medium)).foregroundStyle(.secondary).lineLimit(1)
             }

@@ -57,7 +57,7 @@ struct AccountDetailView: View {
         VStack(spacing: 13) {
             ProfileArtwork(seed: account.id, symbol: "command", size: 118)
             VStack(spacing: 4) {
-                Text(account.identity).font(.title2.weight(.bold)).lineLimit(1)
+                Text(mappings.displayIdentity(for: account)).font(.title2.weight(.bold)).lineLimit(1)
                 Text([account.name, account.plan?.uppercased()].compactMap { $0 }.joined(separator: " · "))
                     .font(.subheadline.weight(.medium)).foregroundStyle(.secondary)
             }
@@ -187,7 +187,8 @@ private struct MappingPicker: View {
                     HStack {
                         VStack(alignment: .leading) {
                             Text(profile.name).foregroundStyle(.primary)
-                            Text(owner?.identity ?? "Trống").font(.caption).foregroundStyle(.secondary)
+                            Text(owner.map { mappings.displayIdentity(for: $0) } ?? "Trống")
+                                .font(.caption).foregroundStyle(.secondary)
                         }
                         Spacer()
                         if mappings.profile(for: accountID).id == profile.id {
@@ -208,6 +209,7 @@ private struct MappingPicker: View {
 struct AccountBrowserView: View {
     let accountID: String
     let launch: BrowserLaunch
+    @EnvironmentObject private var store: CockpitStore
     @EnvironmentObject private var mappings: ProfileMappingStore
     @StateObject private var browser = BrowserState()
     @State private var showingCodeEntry = false
@@ -221,7 +223,10 @@ struct AccountBrowserView: View {
                 ProfileWebView(
                     dataStoreIdentifier: profile.dataStoreIdentifier,
                     initialRequest: URLRequest(url: initialURL),
-                    state: browser
+                    state: browser,
+                    onIdentityDetected: { identity in
+                        mappings.record(identity: identity, for: profile.id, accounts: store.accounts)
+                    }
                 )
                 .id(webViewGeneration)
                 if browser.isLoading { ProgressView(value: browser.progress).progressViewStyle(.linear) }
@@ -271,6 +276,7 @@ struct AccountBrowserView: View {
                     browser.webView?.stopLoading()
                     browser.webView = nil
                     try? await ProfileDataStore.clear(identifier: profile.dataStoreIdentifier)
+                    mappings.clearIdentity(for: profile.id)
                     webViewGeneration = UUID()
                 }
             }

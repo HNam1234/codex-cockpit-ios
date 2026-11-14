@@ -6,9 +6,10 @@ struct ProfileWebView: UIViewRepresentable {
     let dataStoreIdentifier: UUID
     let initialRequest: URLRequest
     @ObservedObject var state: BrowserState
+    var onIdentityDetected: ((WebAccountIdentity) -> Void)? = nil
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(state: state)
+        Coordinator(state: state, onIdentityDetected: onIdentityDetected)
     }
 
     func makeUIView(context: Context) -> WKWebView {
@@ -45,10 +46,15 @@ struct ProfileWebView: UIViewRepresentable {
 
     final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         private let state: BrowserState
+        private let onIdentityDetected: ((WebAccountIdentity) -> Void)?
         private var observations: [NSKeyValueObservation] = []
 
-        init(state: BrowserState) {
+        init(
+            state: BrowserState,
+            onIdentityDetected: ((WebAccountIdentity) -> Void)?
+        ) {
             self.state = state
+            self.onIdentityDetected = onIdentityDetected
         }
 
         func observe(_ webView: WKWebView) {
@@ -113,6 +119,7 @@ struct ProfileWebView: UIViewRepresentable {
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             state.update(from: webView)
+            probeChatGPTIdentity(in: webView)
             guard webView.url?.host == AppURLs.deviceLogin.host,
                   webView.url?.path.hasPrefix(AppURLs.deviceLogin.path) == true,
                   let code = state.pendingDeviceCode else { return }
@@ -134,6 +141,36 @@ struct ProfileWebView: UIViewRepresentable {
             })();
             """
             webView.evaluateJavaScript(script)
+        }
+
+        private func probeChatGPTIdentity(in webView: WKWebView) {
+            guard webView.url?.host?.lowercased() == AppURLs.chatGPT.host else { return }
+            let script = """
+            (async () => {
+              try {
+                const response = await fetch('/api/auth/session', {
+                  credentials: 'same-origin',
+                  cache: 'no-store'
+                });
+                if (!response.ok) return null;
+                const session = await response.json();
+                const user = session && session.user;
+                if (!user) return null;
+                const name = typeof user.name === 'string' ? user.name.trim() : '';
+                const email = typeof user.email === 'string' ? user.email.trim() : '';
+                if (!name && !email) return null;
+                return { name: name || null, email: email || null };
+              } catch (_) {
+                return null;
+              }
+            })();
+            """
+            webView.evaluateJavaScript(script) { [weak self] value, _ in
+                guard let identity = WebAccountIdentity(javaScriptValue: value) else { return }
+                Task { @MainActor [weak self] in
+                    self?.onIdentityDetected?(identity)
+                }
+            }
         }
     }
 }

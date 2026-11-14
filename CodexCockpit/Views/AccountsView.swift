@@ -27,7 +27,7 @@ struct AccountsView: View {
                                 ProfileArtwork(seed: profile.id, symbol: "safari.fill", size: 58)
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(profile.name).font(.headline).foregroundStyle(.primary)
-                                    Text(account?.identity ?? "Chưa gán tài khoản")
+                                    Text(account.map { mappings.displayIdentity(for: $0) } ?? "Chưa gán tài khoản")
                                         .font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
                                 }
                                 Spacer()

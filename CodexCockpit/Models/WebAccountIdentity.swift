@@ -12,6 +12,14 @@ struct WebAccountIdentity: Codable, Equatable {
         self.email = cleanEmail
     }
 
+    init?(javaScriptValue: Any?) {
+        guard let payload = javaScriptValue as? [String: Any] else { return nil }
+        self.init(
+            name: payload["name"] as? String,
+            email: payload["email"] as? String
+        )
+    }
+
     var label: String {
         name ?? email ?? ""
     }
