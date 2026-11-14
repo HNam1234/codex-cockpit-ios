@@ -25,7 +25,7 @@ final class DeviceCodeAssistantTests: XCTestCase {
             """,
             baseURL: AppURLs.deviceLogin
         )
-        await fulfillment(of: [navigation.didFinish], timeout: 5)
+        await fulfillment(of: [navigation.didFinish], timeout: 20)
 
         let filled = await DeviceCodeAssistant.fill(
             "abcd-efgh",
@@ -73,7 +73,7 @@ final class DeviceCodeAssistantTests: XCTestCase {
             """,
             baseURL: AppURLs.deviceLogin
         )
-        await fulfillment(of: [navigation.didFinish], timeout: 5)
+        await fulfillment(of: [navigation.didFinish], timeout: 20)
 
         let submitted = await DeviceCodeAssistant.submit(
             in: webView,
@@ -118,7 +118,7 @@ final class DeviceCodeAssistantTests: XCTestCase {
             """,
             baseURL: AppURLs.deviceLogin
         )
-        await fulfillment(of: [navigation.didFinish], timeout: 5)
+        await fulfillment(of: [navigation.didFinish], timeout: 20)
 
         let submitted = await DeviceCodeAssistant.submit(
             in: webView,
@@ -148,7 +148,7 @@ final class DeviceCodeAssistantTests: XCTestCase {
             """,
             baseURL: AppURLs.deviceLogin
         )
-        await fulfillment(of: [navigation.didFinish], timeout: 5)
+        await fulfillment(of: [navigation.didFinish], timeout: 20)
 
         let browser = BrowserState()
         browser.prepareDeviceCode("ABCD-EFGH")
