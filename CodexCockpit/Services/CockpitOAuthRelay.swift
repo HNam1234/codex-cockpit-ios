@@ -9,6 +9,18 @@ struct CockpitOAuthAttempt: Hashable {
     let state: String
 }
 
+struct CockpitOAuthCallback: Identifiable, Hashable {
+    let url: URL
+
+    var id: URL { url }
+}
+
+enum CockpitOAuthCallbackInspection: Equatable {
+    case notCallback
+    case captured(CockpitOAuthCallback)
+    case rejected(CockpitOAuthRelayError)
+}
+
 enum CockpitOAuthRelayError: String, Error, Equatable {
     case invalidAuthorizationURL
     case unsupportedAuthorizationURL
@@ -86,13 +98,57 @@ enum CockpitOAuthRelay {
         )
     }
 
+    static func inspectCallback(
+        _ url: URL,
+        for attempt: CockpitOAuthAttempt
+    ) -> CockpitOAuthCallbackInspection {
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            return .notCallback
+        }
+
+        let host = components.host?.lowercased()
+        let isLoopbackNavigation = host == "localhost" || host == "127.0.0.1"
+        let resemblesCallback = isLoopbackNavigation || components.path == "/auth/callback"
+        guard resemblesCallback else {
+            return .notCallback
+        }
+
+        guard
+            components.scheme?.lowercased() == attempt.callbackScheme,
+            host == attempt.callbackHost,
+            components.port == attempt.callbackPort,
+            components.path == attempt.callbackPath,
+            !hasCredentials(components),
+            components.fragment == nil
+        else {
+            return .rejected(.callbackMismatch)
+        }
+
+        let codeItems = (components.queryItems ?? []).filter { $0.name == "code" }
+        let stateItems = (components.queryItems ?? []).filter { $0.name == "state" }
+        guard
+            codeItems.count == 1,
+            let code = codeItems[0].value,
+            !code.isEmpty,
+            stateItems.count == 1,
+            let returnedState = stateItems[0].value,
+            !returnedState.isEmpty
+        else {
+            return .rejected(.invalidCallback)
+        }
+
+        guard constantTimeEqual(returnedState, attempt.state) else {
+            return .rejected(.stateMismatch)
+        }
+        return .captured(CockpitOAuthCallback(url: url))
+    }
+
     private static func isHostedAuthorizationURL(_ components: URLComponents) -> Bool {
         components.scheme?.lowercased() == "https"
             && components.host?.lowercased() == "chatgpt.com"
             && components.port == nil
             && components.path == "/codex/desktop-auth"
-            && components.user == nil
-            && components.password == nil
+            && !hasCredentials(components)
             && components.fragment == nil
     }
 
@@ -101,8 +157,7 @@ enum CockpitOAuthRelay {
             && components.host?.lowercased() == "auth.openai.com"
             && components.port == nil
             && components.path == "/oauth/authorize"
-            && components.user == nil
-            && components.password == nil
+            && !hasCredentials(components)
             && components.fragment == nil
     }
 
@@ -128,13 +183,30 @@ enum CockpitOAuthRelay {
             let port = components.port,
             (1...65_535).contains(port),
             components.path == "/auth/callback",
-            components.user == nil,
-            components.password == nil,
+            !hasCredentials(components),
             components.percentEncodedQuery == nil,
             components.fragment == nil
         else {
             throw CockpitOAuthRelayError.invalidRedirectURI
         }
         return (host, port)
+    }
+
+    private static func hasCredentials(_ components: URLComponents) -> Bool {
+        components.user != nil || components.password != nil
+    }
+
+    private static func constantTimeEqual(_ lhs: String, _ rhs: String) -> Bool {
+        let left = Array(lhs.utf8)
+        let right = Array(rhs.utf8)
+        let count = max(left.count, right.count)
+        var difference = left.count ^ right.count
+
+        for index in 0..<count {
+            let leftByte = index < left.count ? left[index] : 0
+            let rightByte = index < right.count ? right[index] : 0
+            difference |= Int(leftByte ^ rightByte)
+        }
+        return difference == 0
     }
 }
