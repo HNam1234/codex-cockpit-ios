@@ -55,7 +55,7 @@ final class ProfileTests: XCTestCase {
             stale: false
         )
 
-        XCTAssertEqual(signal.presentationStatus, "CÓ KHẢ NĂNG")
+        XCTAssertEqual(signal.presentationStatus, L10n.text("tibo.status.likely"))
         XCTAssertEqual(signal.presentationIcon, "sparkles")
         XCTAssertEqual(signal.presentationURL, URL(string: post.url))
         XCTAssertEqual(signal.presentationSource, "@thsottiaux")

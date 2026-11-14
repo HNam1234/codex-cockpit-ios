@@ -58,8 +58,14 @@ final class SubscriptionStatusTests: XCTestCase {
         let window = quotaWindow(remaining: 80, resetsAt: 1_000_000 + 2 * 3_600 + 18 * 60)
 
         XCTAssertEqual(window.resetCountdownText(at: now), L10n.format("quota.reset.hours_minutes", 2, 18))
-        XCTAssertEqual(window.resetCountdownText(at: now, compact: true), "2g 18p")
-        XCTAssertEqual(quotaWindow(remaining: 80, resetsAt: 999_999).resetCountdownText(at: now), "Đang cập nhật kỳ mới")
+        XCTAssertEqual(
+            window.resetCountdownText(at: now, compact: true),
+            L10n.format("quota.compact.hours_minutes", 2, 18)
+        )
+        XCTAssertEqual(
+            quotaWindow(remaining: 80, resetsAt: 999_999).resetCountdownText(at: now),
+            L10n.text("quota.resetting")
+        )
     }
 
     func testAccountHealthPrioritizesLoginExpirationAndQuota() {
