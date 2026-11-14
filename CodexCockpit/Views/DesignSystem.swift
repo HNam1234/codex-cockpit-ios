@@ -91,9 +91,11 @@ struct SectionHeading: View {
 
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
-            Text(title).font(.title2.weight(.bold))
+            Text(L10n.text(title)).font(.title2.weight(.bold))
             Spacer()
-            if let caption { Text(caption).font(.caption.weight(.semibold)).foregroundStyle(.secondary) }
+            if let caption {
+                Text(L10n.text(caption)).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+            }
         }
     }
 }
@@ -118,7 +120,7 @@ struct AccountHealthBadge: View {
             .padding(.horizontal, compact ? 6 : 8)
             .padding(.vertical, compact ? 3 : 4)
             .background(tint.opacity(0.11), in: Capsule())
-            .accessibilityLabel("Trạng thái: \(health.title)")
+            .accessibilityLabel(L10n.format("health.accessibility", health.title))
     }
 }
 

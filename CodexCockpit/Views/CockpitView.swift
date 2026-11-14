@@ -50,7 +50,7 @@ struct CockpitView: View {
                 .font(.caption2.weight(.bold)).tracking(1.5).foregroundStyle(CockpitTheme.accent)
             Text("Quota của bạn").font(.system(size: 29, weight: .bold, design: .rounded))
             HStack(spacing: 3) {
-                Text("\(store.accounts.count) tài khoản · realtime")
+                Text(L10n.format("cockpit.account_count_realtime", store.accounts.count))
                 if store.updatedAt > 0 {
                     Text("· cập nhật")
                     Text(Date(timeIntervalSince1970: TimeInterval(store.updatedAt)), style: .relative)
@@ -68,7 +68,9 @@ struct CockpitView: View {
                 title: "Tài khoản",
                 caption: store.accounts.isEmpty
                     ? nil
-                    : (attentionCount > 0 ? "\(attentionCount) CẦN CHÚ Ý" : "TẤT CẢ ĐỀU ỔN")
+                    : (attentionCount > 0
+                        ? L10n.format("cockpit.attention_count", attentionCount)
+                        : L10n.text("cockpit.all_good"))
             )
             if store.accounts.isEmpty && store.isLoading {
                 ProgressView("Đang tải quota…").frame(maxWidth: .infinity).padding(.vertical, 60)
@@ -157,7 +159,8 @@ struct TiboResetBanner: View {
                             .font(.headline.monospacedDigit().weight(.heavy))
                     }
                     .frame(width: 56, height: 56)
-                    Text("RESET HÔM NAY").font(.system(size: 8, weight: .heavy)).tracking(0.4)
+                    Text(L10n.text("tibo.reset_today"))
+                        .font(.system(size: 8, weight: .heavy)).tracking(0.4)
                 }
             }
             .foregroundStyle(.white).padding(13)
@@ -166,7 +169,12 @@ struct TiboResetBanner: View {
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         .shadow(color: colors[0].opacity(0.22), radius: 14, y: 7)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("TIBO \(signal.presentationStatus): \(signal.hintPost?.text ?? signal.latestPost?.text ?? signal.message). Xác suất reset hôm nay \(signal.probabilityToday ?? 0) phần trăm")
+        .accessibilityLabel(L10n.format(
+            "tibo.accessibility",
+            signal.presentationStatus,
+            signal.hintPost?.text ?? signal.latestPost?.text ?? signal.message,
+            signal.probabilityToday ?? 0
+        ))
     }
 }
 
@@ -223,7 +231,7 @@ private struct MiniQuotaRow: View {
         TimelineView(.periodic(from: .now, by: 60)) { context in
             VStack(spacing: 2) {
                 HStack(spacing: 3) {
-                    Text(window.label).font(.system(size: 9, weight: .bold)).lineLimit(1)
+                    Text(window.localizedLabel).font(.system(size: 9, weight: .bold)).lineLimit(1)
                     Spacer()
                     Text("\(Int(window.remainingPercent.rounded()))%")
                         .font(.system(size: 9, weight: .heavy, design: .monospaced)).foregroundStyle(color)
@@ -258,7 +266,7 @@ struct QuotaProgressRow: View {
         TimelineView(.periodic(from: .now, by: 60)) { context in
             VStack(spacing: compact ? 7 : 9) {
                 HStack {
-                    Text(window.label).font(compact ? .caption.weight(.bold) : .subheadline.weight(.bold))
+                    Text(window.localizedLabel).font(compact ? .caption.weight(.bold) : .subheadline.weight(.bold))
                     Spacer()
                     Text("\(Int(window.remainingPercent.rounded()))%")
                         .font((compact ? Font.caption : Font.subheadline).monospacedDigit().weight(.heavy))
@@ -275,7 +283,7 @@ struct QuotaProgressRow: View {
                 .frame(height: compact ? 7 : 10)
                 if !compact {
                     HStack {
-                        Text("Đã dùng \(Int(window.usedPercent.rounded()))%")
+                        Text(L10n.format("quota.used_percent", Int(window.usedPercent.rounded())))
                         Spacer()
                         Text(window.resetCountdownText(at: context.date))
                     }

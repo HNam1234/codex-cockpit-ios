@@ -85,7 +85,10 @@ struct AccountDetailView: View {
                             .font(.caption.weight(.bold))
                             .foregroundStyle(account.subscriptionIsExpired() ? .red : CockpitTheme.violet)
                         if let expiration = account.subscriptionExpirationDate {
-                            Text("· hết hạn \(expiration.formatted(date: .numeric, time: .omitted))")
+                            Text(L10n.format(
+                                "subscription.expires_on",
+                                expiration.formatted(date: .numeric, time: .omitted)
+                            ))
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                         }
@@ -138,7 +141,11 @@ struct AccountDetailView: View {
                     showingDeviceAuthorization = true
                 }
                 if account.resetCredits > 0, store.capabilities?.resetCredit == true {
-                    actionTile("Reset credit · \(account.resetCredits)", icon: "arrow.counterclockwise.circle.fill", tint: CockpitTheme.accent) {
+                    actionTile(
+                        L10n.format("reset.credit_count", account.resetCredits),
+                        icon: "arrow.counterclockwise.circle.fill",
+                        tint: CockpitTheme.accent
+                    ) {
                         confirmingReset = true
                     }
                 }
@@ -150,7 +157,7 @@ struct AccountDetailView: View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 16) {
                 Image(systemName: icon).font(.title2.weight(.semibold)).foregroundStyle(tint)
-                Text(title).font(.subheadline.weight(.bold)).foregroundStyle(.primary).lineLimit(1)
+                Text(L10n.text(title)).font(.subheadline.weight(.bold)).foregroundStyle(.primary).lineLimit(1)
             }
             .frame(maxWidth: .infinity, minHeight: 72, alignment: .leading)
             .padding(15).glassCard(cornerRadius: 20)
@@ -161,11 +168,11 @@ struct AccountDetailView: View {
 
     private func resetText(_ outcome: String) -> String {
         switch outcome {
-        case "reset": return "Đã reset usage thành công."
-        case "nothingToReset": return "Hiện không có usage cần reset."
-        case "noCredit": return "Tài khoản không còn reset credit."
-        case "alreadyRedeemed": return "Yêu cầu này đã được xử lý trước đó."
-        default: return "VPS trả kết quả: \(outcome)"
+        case "reset": return L10n.text("reset.result.success")
+        case "nothingToReset": return L10n.text("reset.result.nothing")
+        case "noCredit": return L10n.text("reset.result.no_credit")
+        case "alreadyRedeemed": return L10n.text("reset.result.redeemed")
+        default: return L10n.format("reset.result.unknown", outcome)
         }
     }
 }
@@ -176,8 +183,14 @@ private struct AuthorizationStatusCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SectionHeading(title: "Ủy quyền", caption: session.status == "succeeded" ? "Hoàn tất" : session.status)
-            LabeledContent("Trạng thái", value: session.status == "succeeded" ? "Hoàn tất" : session.status)
+            SectionHeading(
+                title: "Ủy quyền",
+                caption: session.status == "succeeded" ? L10n.text("authorization.completed") : session.status
+            )
+            LabeledContent(
+                "Trạng thái",
+                value: session.status == "succeeded" ? L10n.text("authorization.completed") : session.status
+            )
             if let code = session.userCode {
                 HStack {
                     Text(code).font(.title3.monospaced().weight(.bold)).textSelection(.enabled)
@@ -261,7 +274,10 @@ struct AccountBrowserView: View {
             }
             .presentationDetents([.medium])
         }
-        .confirmationDialog("Xóa cookie và session của \(profile.name)?", isPresented: $showingClear) {
+        .confirmationDialog(
+            L10n.format("browser.clear_confirmation", profile.name),
+            isPresented: $showingClear
+        ) {
             Button("Xóa profile", role: .destructive) {
                 Task {
                     browser.webView?.stopLoading()
@@ -300,7 +316,7 @@ struct AccountBrowserView: View {
         .padding(.horizontal, 14).padding(.vertical, 9)
         .background(.thinMaterial)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Device code \(code)")
+        .accessibilityLabel(L10n.format("device_code.accessibility", code))
     }
 }
 

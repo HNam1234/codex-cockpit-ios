@@ -32,13 +32,13 @@ final class AppLockModel: ObservableObject {
         let context = LAContext()
         var error: NSError?
         guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error) else {
-            errorMessage = error?.localizedDescription ?? "Không dùng được Face ID/mật mã."
+            errorMessage = error?.localizedDescription ?? L10n.text("lock.unavailable")
             return
         }
         do {
             let success = try await context.evaluatePolicy(
                 .deviceOwnerAuthentication,
-                localizedReason: "Mở Codex Cockpit và năm phiên tài khoản."
+                localizedReason: L10n.text("lock.reason")
             )
             isUnlocked = success
             errorMessage = nil

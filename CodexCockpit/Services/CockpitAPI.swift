@@ -6,7 +6,7 @@ enum CockpitAPIError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .invalidResponse: return "Phản hồi từ VPS không hợp lệ."
+        case .invalidResponse: return L10n.text("error.invalid_response")
         case .server(let message): return message
         }
     }
@@ -108,13 +108,13 @@ actor CockpitAPI: CockpitAPIClient {
         guard let http = response as? HTTPURLResponse else { throw CockpitAPIError.invalidResponse }
         guard (200..<300).contains(http.statusCode) else {
             let message = (try? JSONDecoder().decode(ErrorEnvelope.self, from: data).error)
-                ?? "VPS trả lỗi HTTP \(http.statusCode)."
+                ?? L10n.format("error.http", http.statusCode)
             throw CockpitAPIError.server(message)
         }
         do {
             return try JSONDecoder().decode(type, from: data)
         } catch {
-            throw CockpitAPIError.server("Không đọc được dữ liệu từ VPS: \(error.localizedDescription)")
+            throw CockpitAPIError.server(L10n.format("error.decode", error.localizedDescription))
         }
     }
 

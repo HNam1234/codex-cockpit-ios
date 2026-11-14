@@ -31,16 +31,25 @@ final class SubscriptionStatusTests: XCTestCase {
     func testRemainingSubscriptionUsesCeilingAndFallsBackToHours() {
         let now = Date(timeIntervalSince1970: 1_000_000)
 
-        XCTAssertEqual(account(expiresAt: 1_000_000 + Int(2.1 * 86_400)).subscriptionRemainingText(at: now), "Còn 3 ngày")
-        XCTAssertEqual(account(expiresAt: 1_000_000 + Int(23.1 * 3_600)).subscriptionRemainingText(at: now), "Còn 24 giờ")
-        XCTAssertEqual(account(expiresAt: 1_000_000 + 1_800).subscriptionRemainingText(at: now), "Còn <1 giờ")
+        XCTAssertEqual(
+            account(expiresAt: 1_000_000 + Int(2.1 * 86_400)).subscriptionRemainingText(at: now),
+            L10n.format("subscription.days", 3)
+        )
+        XCTAssertEqual(
+            account(expiresAt: 1_000_000 + Int(23.1 * 3_600)).subscriptionRemainingText(at: now),
+            L10n.format("subscription.hours", 24)
+        )
+        XCTAssertEqual(
+            account(expiresAt: 1_000_000 + 1_800).subscriptionRemainingText(at: now),
+            L10n.text("subscription.less_hour")
+        )
     }
 
     func testExpiredSubscriptionIsExplicit() {
         let now = Date(timeIntervalSince1970: 1_000_000)
         let account = account(expiresAt: 999_999)
 
-        XCTAssertEqual(account.subscriptionRemainingText(at: now), "Đã hết hạn")
+        XCTAssertEqual(account.subscriptionRemainingText(at: now), L10n.text("subscription.expired"))
         XCTAssertTrue(account.subscriptionIsExpired(at: now))
     }
 
@@ -48,7 +57,7 @@ final class SubscriptionStatusTests: XCTestCase {
         let now = Date(timeIntervalSince1970: 1_000_000)
         let window = quotaWindow(remaining: 80, resetsAt: 1_000_000 + 2 * 3_600 + 18 * 60)
 
-        XCTAssertEqual(window.resetCountdownText(at: now), "Reset sau 2 giờ 18 phút")
+        XCTAssertEqual(window.resetCountdownText(at: now), L10n.format("quota.reset.hours_minutes", 2, 18))
         XCTAssertEqual(window.resetCountdownText(at: now, compact: true), "2g 18p")
         XCTAssertEqual(quotaWindow(remaining: 80, resetsAt: 999_999).resetCountdownText(at: now), "Đang cập nhật kỳ mới")
     }

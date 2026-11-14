@@ -72,7 +72,10 @@ struct AccountsView: View {
             authorizationAccount = account
         }
         .confirmationDialog(
-            "Xóa \(pendingDelete.map { mappings.displayIdentity(for: $0) } ?? "tài khoản")?",
+            L10n.format(
+                "accounts.delete_confirmation",
+                pendingDelete.map { mappings.displayIdentity(for: $0) } ?? L10n.text("account.generic")
+            ),
             isPresented: Binding(
                 get: { pendingDelete != nil },
                 set: { if !$0 { pendingDelete = nil } }
@@ -127,11 +130,11 @@ struct AccountsView: View {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(mappings.displayIdentity(for: account))
                             .font(.headline).foregroundStyle(.primary).lineLimit(1)
-                        Text("\(profile.name) · \(account.plan?.uppercased() ?? "CHƯA ĐĂNG NHẬP")")
+                        Text("\(profile.name) · \(account.plan?.uppercased() ?? L10n.text("account.not_signed_in"))")
                             .font(.caption).foregroundStyle(.secondary).lineLimit(1)
                         VStack(alignment: .leading, spacing: 3) {
-                            if let remaining = account.subscriptionRemainingText() {
-                                Text(compactSubscriptionText(remaining))
+                            if let remaining = account.subscriptionRemainingText(compact: true) {
+                                Text(remaining)
                                     .font(.caption2.weight(.bold))
                                     .foregroundStyle(account.subscriptionIsExpired() ? .red : CockpitTheme.violet)
                             }
@@ -175,7 +178,7 @@ struct AccountsView: View {
                 }
                 .buttonStyle(CompactAccountActionStyle(tint: .red))
                 .disabled(busy)
-                .accessibilityLabel("Xóa \(account.name)")
+                .accessibilityLabel(L10n.format("accounts.delete_accessibility", account.name))
             }
         }
         .padding(13).glassCard(cornerRadius: 21)
@@ -207,11 +210,6 @@ struct AccountsView: View {
 
     private var errorBinding: Binding<Bool> {
         Binding(get: { store.errorMessage != nil }, set: { if !$0 { store.errorMessage = nil } })
-    }
-
-    private func compactSubscriptionText(_ text: String) -> String {
-        if text == "Đã hết hạn" { return "Hết hạn" }
-        return text.hasPrefix("Còn ") ? String(text.dropFirst(4)) : text
     }
 
     private var previewCode: String? {
@@ -285,7 +283,7 @@ private struct AccountQuotaSnapshot: View {
                 ForEach(windows) { window in
                     VStack(spacing: 2) {
                         HStack(spacing: 3) {
-                            Text(window.label)
+                            Text(window.localizedLabel)
                                 .font(.system(size: 9, weight: .bold)).lineLimit(1)
                             Spacer(minLength: 2)
                             Text("\(Int(window.remainingPercent.rounded()))%")

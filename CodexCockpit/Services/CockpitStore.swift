@@ -90,7 +90,7 @@ final class CockpitStore: ObservableObject {
         refreshed.forEach(replace)
         errorMessage = failureCount == 0
             ? nil
-            : "Không thể cập nhật \(failureCount)/\(accountIDs.count) tài khoản. Dữ liệu cũ vẫn được giữ lại."
+            : L10n.format("error.refresh_partial", failureCount, accountIDs.count)
     }
 
     func refresh(accountID: String) async {

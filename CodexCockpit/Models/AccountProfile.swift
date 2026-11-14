@@ -53,25 +53,47 @@ struct QuotaWindow: Decodable, Hashable, Identifiable, Sendable {
         Date(timeIntervalSince1970: TimeInterval(resetsAt))
     }
 
+    var localizedLabel: String {
+        switch windowMinutes {
+        case 300: L10n.text("quota.window.five_hours")
+        case 10_080: L10n.text("quota.window.week")
+        default: label
+        }
+    }
+
     func resetCountdownText(at now: Date = .now, compact: Bool = false) -> String {
         let seconds = Int(resetDate.timeIntervalSince(now))
-        guard seconds > 0 else { return compact ? "đang reset" : "Đang cập nhật kỳ mới" }
+        guard seconds > 0 else {
+            return L10n.text(compact ? "quota.resetting.compact" : "quota.resetting")
+        }
 
         let days = seconds / 86_400
         let hours = (seconds % 86_400) / 3_600
         let minutes = (seconds % 3_600) / 60
         if compact {
-            if days > 0 { return hours > 0 ? "\(days)n \(hours)g" : "\(days)n" }
-            if hours > 0 { return minutes > 0 ? "\(hours)g \(minutes)p" : "\(hours)g" }
-            return "\(max(1, minutes))p"
+            if days > 0 {
+                return hours > 0
+                    ? L10n.format("quota.compact.days_hours", days, hours)
+                    : L10n.format("quota.compact.days", days)
+            }
+            if hours > 0 {
+                return minutes > 0
+                    ? L10n.format("quota.compact.hours_minutes", hours, minutes)
+                    : L10n.format("quota.compact.hours", hours)
+            }
+            return L10n.format("quota.compact.minutes", max(1, minutes))
         }
         if days > 0 {
-            return hours > 0 ? "Reset sau \(days) ngày \(hours) giờ" : "Reset sau \(days) ngày"
+            return hours > 0
+                ? L10n.format("quota.reset.days_hours", days, hours)
+                : L10n.format("quota.reset.days", days)
         }
         if hours > 0 {
-            return minutes > 0 ? "Reset sau \(hours) giờ \(minutes) phút" : "Reset sau \(hours) giờ"
+            return minutes > 0
+                ? L10n.format("quota.reset.hours_minutes", hours, minutes)
+                : L10n.format("quota.reset.hours", hours)
         }
-        return "Reset sau \(max(1, minutes)) phút"
+        return L10n.format("quota.reset.minutes", max(1, minutes))
     }
 
     enum CodingKeys: String, CodingKey {
@@ -93,23 +115,23 @@ enum AccountHealth: Equatable {
 
     var title: String {
         switch self {
-        case .needsLogin: "Cần đăng nhập"
-        case .expired: "Đã hết hạn"
-        case .expiring: "Sắp hết hạn"
-        case .quotaCritical: "Quota rất thấp"
-        case .quotaLow: "Quota sắp hết"
-        case .healthy: "Hoạt động tốt"
+        case .needsLogin: L10n.text("health.needs_login")
+        case .expired: L10n.text("health.expired")
+        case .expiring: L10n.text("health.expiring")
+        case .quotaCritical: L10n.text("health.quota_critical")
+        case .quotaLow: L10n.text("health.quota_low")
+        case .healthy: L10n.text("health.healthy")
         }
     }
 
     var compactTitle: String {
         switch self {
-        case .needsLogin: "Cần login"
-        case .expired: "Hết hạn"
-        case .expiring: "Sắp hạn"
+        case .needsLogin: L10n.text("health.needs_login.compact")
+        case .expired: L10n.text("health.expired.compact")
+        case .expiring: L10n.text("health.expiring.compact")
         case .quotaCritical: "Quota <10%"
-        case .quotaLow: "Quota thấp"
-        case .healthy: "Ổn"
+        case .quotaLow: L10n.text("health.quota_low.compact")
+        case .healthy: L10n.text("health.healthy.compact")
         }
     }
 
@@ -187,17 +209,21 @@ struct AccountSnapshot: Decodable, Identifiable, Hashable, Sendable {
         return Date(timeIntervalSince1970: TimeInterval(subscriptionExpiresAt))
     }
 
-    func subscriptionRemainingText(at now: Date = .now) -> String? {
+    func subscriptionRemainingText(at now: Date = .now, compact: Bool = false) -> String? {
         guard let expiration = subscriptionExpirationDate else { return nil }
         let remaining = expiration.timeIntervalSince(now)
-        guard remaining > 0 else { return "Đã hết hạn" }
+        guard remaining > 0 else {
+            return L10n.text(compact ? "subscription.expired.compact" : "subscription.expired")
+        }
         if remaining >= 86_400 {
-            return "Còn \(Int(ceil(remaining / 86_400))) ngày"
+            let days = Int(ceil(remaining / 86_400))
+            return L10n.format(compact ? "subscription.days.compact" : "subscription.days", days)
         }
         if remaining >= 3_600 {
-            return "Còn \(Int(ceil(remaining / 3_600))) giờ"
+            let hours = Int(ceil(remaining / 3_600))
+            return L10n.format(compact ? "subscription.hours.compact" : "subscription.hours", hours)
         }
-        return "Còn <1 giờ"
+        return L10n.text(compact ? "subscription.less_hour.compact" : "subscription.less_hour")
     }
 
     func subscriptionIsExpired(at now: Date = .now) -> Bool {

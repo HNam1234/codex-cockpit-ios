@@ -13,7 +13,8 @@ struct SettingsView: View {
                     VStack(spacing: 10) {
                         ProfileArtwork(seed: "settings", symbol: "command", size: 92)
                         Text("Codex Cockpit").font(.title.weight(.bold))
-                        Text("\(appVersion) · Premium quota control").font(.subheadline).foregroundStyle(.secondary)
+                        Text(L10n.format("settings.version_subtitle", appVersion))
+                            .font(.subheadline).foregroundStyle(.secondary)
                     }
                     .padding(.vertical, 8)
 
@@ -60,7 +61,7 @@ struct SettingsView: View {
     }
 
     private var appVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.5.3"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.6.0"
     }
 
     private func settingsCard<Content: View>(
@@ -70,7 +71,7 @@ struct SettingsView: View {
         @ViewBuilder content: () -> Content
     ) -> some View {
         VStack(alignment: .leading, spacing: 13) {
-            Label(title, systemImage: icon).font(.headline).foregroundStyle(tint)
+            Label(L10n.text(title), systemImage: icon).font(.headline).foregroundStyle(tint)
             content()
         }
         .frame(maxWidth: .infinity, alignment: .leading)

@@ -37,9 +37,9 @@ enum TiboAlertPolicy {
         let title: String
         switch signal.status {
         case "likely":
-            title = "TIBO: Có tín hiệu reset hôm nay"
+            title = L10n.text("tibo.notification.likely")
         case "yes":
-            title = "TIBO: Reset đã được xác nhận"
+            title = L10n.text("tibo.notification.confirmed")
         default:
             return nil
         }
@@ -74,12 +74,12 @@ enum TiboAlertPolicy {
 
 extension TiboResetStatus {
     var presentationStatus: String {
-        if stale { return "DỮ LIỆU CŨ" }
+        if stale { return L10n.text("tibo.status.stale") }
         switch status {
-        case "yes": return "ĐÃ XÁC NHẬN"
-        case "likely": return "CÓ KHẢ NĂNG"
-        case "no": return "CHƯA CÓ TÍN HIỆU"
-        default: return "ĐANG THEO DÕI"
+        case "yes": return L10n.text("tibo.status.confirmed")
+        case "likely": return L10n.text("tibo.status.likely")
+        case "no": return L10n.text("tibo.status.none")
+        default: return L10n.text("tibo.status.watching")
         }
     }
 
@@ -104,6 +104,6 @@ extension TiboResetStatus {
     }
 
     var presentationBasis: String {
-        probabilityBasis == nil ? "Ước tính theo lịch sử" : "Ước tính từ lịch sử + tín hiệu X"
+        L10n.text(probabilityBasis == nil ? "tibo.basis.history" : "tibo.basis.history_x")
     }
 }

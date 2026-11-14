@@ -10,7 +10,7 @@ final class TiboAlertTests: XCTestCase {
         ))
 
         XCTAssertEqual(content?.identifier, "tibo.likely.post-123")
-        XCTAssertEqual(content?.title, "TIBO: Có tín hiệu reset hôm nay")
+        XCTAssertEqual(content?.title, L10n.text("tibo.notification.likely"))
         XCTAssertEqual(content?.body, "We shipped an update")
     }
 
@@ -22,7 +22,7 @@ final class TiboAlertTests: XCTestCase {
         ))
 
         XCTAssertEqual(content?.identifier, "tibo.yes.post-confirmed")
-        XCTAssertEqual(content?.title, "TIBO: Reset đã được xác nhận")
+        XCTAssertEqual(content?.title, L10n.text("tibo.notification.confirmed"))
         XCTAssertEqual(content?.body, "Reset is live")
     }
 

@@ -113,7 +113,7 @@ struct PCDeviceCodeSheet: View {
                 .foregroundStyle(.white)
                 .frame(width: 24, height: 24)
                 .background(CockpitTheme.violet, in: Circle())
-            Text(text).font(.subheadline.weight(.semibold))
+            Text(L10n.text(text)).font(.subheadline.weight(.semibold))
             Spacer(minLength: 0)
         }
     }

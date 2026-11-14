@@ -1,0 +1,155 @@
+/* Dynamic quota and subscription copy */
+"quota.window.five_hours" = "5 giờ";
+"quota.window.week" = "Tuần";
+"quota.resetting.compact" = "đang reset";
+"quota.resetting" = "Đang cập nhật kỳ mới";
+"quota.compact.days_hours" = "%dn %dg";
+"quota.compact.days" = "%dn";
+"quota.compact.hours_minutes" = "%dg %dp";
+"quota.compact.hours" = "%dg";
+"quota.compact.minutes" = "%dp";
+"quota.reset.days_hours" = "Reset sau %d ngày %d giờ";
+"quota.reset.days" = "Reset sau %d ngày";
+"quota.reset.hours_minutes" = "Reset sau %d giờ %d phút";
+"quota.reset.hours" = "Reset sau %d giờ";
+"quota.reset.minutes" = "Reset sau %d phút";
+"quota.used_percent" = "Đã dùng %d%%";
+"subscription.expired" = "Đã hết hạn";
+"subscription.expired.compact" = "Hết hạn";
+"subscription.days" = "Còn %d ngày";
+"subscription.days.compact" = "%d ngày";
+"subscription.hours" = "Còn %d giờ";
+"subscription.hours.compact" = "%d giờ";
+"subscription.less_hour" = "Còn <1 giờ";
+"subscription.less_hour.compact" = "<1 giờ";
+"subscription.expires_on" = "· hết hạn %@";
+
+/* Health */
+"health.needs_login" = "Cần đăng nhập";
+"health.expired" = "Đã hết hạn";
+"health.expiring" = "Sắp hết hạn";
+"health.quota_critical" = "Quota rất thấp";
+"health.quota_low" = "Quota sắp hết";
+"health.healthy" = "Hoạt động tốt";
+"health.needs_login.compact" = "Cần login";
+"health.expired.compact" = "Hết hạn";
+"health.expiring.compact" = "Sắp hạn";
+"health.quota_low.compact" = "Quota thấp";
+"health.healthy.compact" = "Ổn";
+"health.accessibility" = "Trạng thái: %@";
+
+/* TIBO */
+"tibo.notification.likely" = "TIBO: Có tín hiệu reset hôm nay";
+"tibo.notification.confirmed" = "TIBO: Reset đã được xác nhận";
+"tibo.status.stale" = "DỮ LIỆU CŨ";
+"tibo.status.confirmed" = "ĐÃ XÁC NHẬN";
+"tibo.status.likely" = "CÓ KHẢ NĂNG";
+"tibo.status.none" = "CHƯA CÓ TÍN HIỆU";
+"tibo.status.watching" = "ĐANG THEO DÕI";
+"tibo.basis.history" = "Ước tính theo lịch sử";
+"tibo.basis.history_x" = "Ước tính từ lịch sử + tín hiệu X";
+"tibo.reset_today" = "RESET HÔM NAY";
+"tibo.accessibility" = "TIBO %@: %@. Xác suất reset hôm nay %d phần trăm";
+
+/* Errors and authentication */
+"error.refresh_partial" = "Không thể cập nhật %d/%d tài khoản. Dữ liệu cũ vẫn được giữ lại.";
+"error.invalid_response" = "Phản hồi từ máy chủ không hợp lệ.";
+"error.http" = "Máy chủ trả lỗi HTTP %d.";
+"error.decode" = "Không đọc được dữ liệu từ máy chủ: %@";
+"lock.unavailable" = "Không dùng được Face ID/mật mã.";
+"lock.reason" = "Mở Codex Cockpit và các phiên tài khoản.";
+"reset.result.success" = "Đã reset usage thành công.";
+"reset.result.nothing" = "Hiện không có usage cần reset.";
+"reset.result.no_credit" = "Tài khoản không còn reset credit.";
+"reset.result.redeemed" = "Yêu cầu này đã được xử lý trước đó.";
+"reset.result.unknown" = "Máy chủ trả kết quả: %@";
+
+/* Dynamic UI */
+"cockpit.account_count_realtime" = "%d tài khoản · realtime";
+"cockpit.attention_count" = "%d CẦN CHÚ Ý";
+"cockpit.all_good" = "TẤT CẢ ĐỀU ỔN";
+"accounts.delete_confirmation" = "Xóa %@?";
+"accounts.delete_accessibility" = "Xóa %@";
+"account.generic" = "tài khoản";
+"account.not_signed_in" = "CHƯA ĐĂNG NHẬP";
+"reset.credit_count" = "Reset credit · %d";
+"authorization.completed" = "Hoàn tất";
+"browser.clear_confirmation" = "Xóa cookie và session của %@?";
+"device_code.accessibility" = "Device code %@";
+"settings.version_subtitle" = "%@ · Quản lý quota cao cấp";
+
+/* Dashboard */
+"Không thể cập nhật" = "Không thể cập nhật";
+"Lỗi không xác định" = "Lỗi không xác định";
+"Quota của bạn" = "Quota của bạn";
+"· cập nhật" = "· cập nhật";
+"Tài khoản" = "Tài khoản";
+"Đang tải quota…" = "Đang tải quota…";
+"Chưa có tài khoản" = "Chưa có tài khoản";
+
+/* Accounts */
+"Thêm tài khoản" = "Thêm tài khoản";
+"Xóa account và WebKit" = "Xóa account và WebKit";
+"Hủy" = "Hủy";
+"Credential trên VPS sẽ được archive để có thể khôi phục. Cookie WebKit trên iPhone sẽ bị xóa." = "Credential trên máy chủ sẽ được lưu trữ để có thể khôi phục. Cookie WebKit trên iPhone sẽ bị xóa.";
+"Không thể hoàn tất" = "Không thể hoàn tất";
+"Tài khoản & WebKit" = "Tài khoản & WebKit";
+"Mỗi account có đúng một WebKit riêng. Cookie và phiên đăng nhập không dùng chung." = "Mỗi account có đúng một WebKit riêng. Cookie và phiên đăng nhập không dùng chung.";
+"Thêm account để tạo WebKit riêng rồi nhập Device Code từ PC." = "Thêm account để tạo WebKit riêng rồi nhập Device Code từ PC.";
+"Mở WebKit" = "Mở WebKit";
+"Code từ PC" = "Code từ PC";
+"Thêm account + WebKit" = "Thêm account + WebKit";
+"Account mới sẽ có một WebKit và cookie store riêng." = "Account mới sẽ có một WebKit và cookie store riêng.";
+"Tên gợi nhớ (không bắt buộc)" = "Tên gợi nhớ (không bắt buộc)";
+"Tạo và nhập code PC" = "Tạo và nhập code PC";
+"Sau khi tạo, nhập Device Code đang hiện trên PC. App sẽ mở đúng WebKit và tự điền mã cục bộ." = "Sau khi tạo, nhập Device Code đang hiện trên PC. App sẽ mở đúng WebKit và tự điền mã cục bộ.";
+"Đóng" = "Đóng";
+
+/* Device Code */
+"Nhập code từ PC" = "Nhập code từ PC";
+"Code sẽ được điền vào WebKit riêng của account này" = "Code sẽ được điền vào WebKit riêng của account này";
+"Trên PC chạy codex login --device-auth" = "Trên PC chạy codex login --device-auth";
+"Copy Device Code mà PC hiển thị" = "Copy Device Code mà PC hiển thị";
+"App tự điền và gửi code trong WebKit" = "App tự điền và gửi code trong WebKit";
+"Dán code từ clipboard" = "Dán code từ clipboard";
+"Tiếp tục tự động" = "Tiếp tục tự động";
+
+/* Tabs and settings */
+"Tổng quan" = "Tổng quan";
+"Cài đặt" = "Cài đặt";
+"Thư viện" = "Thư viện";
+"Tài khoản Codex" = "Tài khoản Codex";
+"WebKit profiles" = "Hồ sơ WebKit";
+"Kho dữ liệu" = "Kho dữ liệu";
+"Persistent" = "Lưu cố định";
+"Riêng tư" = "Riêng tư";
+"Cookie nằm trong sandbox WebKit trên iPhone. App không đọc hoặc gửi cookie lên VPS." = "Cookie nằm trong sandbox WebKit trên iPhone. App không đọc hoặc gửi cookie lên máy chủ.";
+"Thông báo tín hiệu mạnh" = "Thông báo tín hiệu mạnh";
+"Chỉ báo khi trạng thái mới là có khả năng hoặc đã xác nhận." = "Chỉ báo khi trạng thái mới là có khả năng hoặc đã xác nhận.";
+"Đang xin quyền thông báo…" = "Đang xin quyền thông báo…";
+"Quyền thông báo đang bị tắt trong Cài đặt iOS." = "Quyền thông báo đang bị tắt trong Cài đặt iOS.";
+"VPS đọc tracker OpenTheRank và trạng thái công khai @thsottiaux trên X mỗi 15 phút. Tỷ lệ hôm nay là ước tính từ lịch sử + tín hiệu X; không dữ liệu tài khoản nào được gửi ra ngoài." = "Máy chủ đọc tracker OpenTheRank và trạng thái công khai @thsottiaux trên X mỗi 15 phút. Tỷ lệ hôm nay là ước tính từ lịch sử + tín hiệu X; không dữ liệu tài khoản nào được gửi ra ngoài.";
+
+/* Account details and browser */
+"Không tìm thấy tài khoản" = "Không tìm thấy tài khoản";
+"Chi tiết" = "Chi tiết";
+"Dùng một reset credit cho tài khoản này?" = "Dùng một reset credit cho tài khoản này?";
+"Xác nhận reset" = "Xác nhận reset";
+"Còn lại" = "Còn lại";
+"Session riêng" = "Session riêng";
+"WebKit riêng cố định cho account này" = "WebKit riêng cố định cho account này";
+"Mở Web" = "Mở Web";
+"Điều khiển" = "Điều khiển";
+"Cập nhật" = "Cập nhật";
+"Nhập code PC" = "Nhập code PC";
+"Ủy quyền" = "Ủy quyền";
+"Trạng thái" = "Trạng thái";
+"Mở trang xác nhận trong WebKit này" = "Mở trang xác nhận trong WebKit này";
+"Nhập device code" = "Nhập device code";
+"Xóa session" = "Xóa session";
+"Xóa profile" = "Xóa profile";
+"Tự động lại" = "Tự động lại";
+"Device login code" = "Mã đăng nhập thiết bị";
+"Mã chỉ được copy cục bộ và điền vào auth.openai.com trong WebKit đang mở." = "Mã chỉ được copy cục bộ và điền vào auth.openai.com trong WebKit đang mở.";
+"Ủy quyền thiết bị" = "Ủy quyền thiết bị";
+"Mở OpenAI" = "Mở OpenAI";

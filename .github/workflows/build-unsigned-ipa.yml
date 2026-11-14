@@ -37,19 +37,31 @@ jobs:
           xcrun simctl bootstatus "$DEVICE_UDID" -b
           APP_PATH=$(find "$HOME/Library/Developer/Xcode/DerivedData" -path '*/Build/Products/Debug-iphonesimulator/CodexCockpit.app' -print -quit)
           xcrun simctl install "$DEVICE_UDID" "$APP_PATH"
-          xcrun simctl launch --terminate-running-process "$DEVICE_UDID" vn.nam.CodexCockpit
+          xcrun simctl launch --terminate-running-process "$DEVICE_UDID" vn.nam.CodexCockpit -AppleLanguages '(vi)' -AppleLocale vi_VN
           sleep 10
           mkdir -p .build/preview
           xcrun simctl io "$DEVICE_UDID" screenshot .build/preview/cockpit-home.png
-          SIMCTL_CHILD_PREVIEW_TAB=profiles xcrun simctl launch --terminate-running-process "$DEVICE_UDID" vn.nam.CodexCockpit
+          SIMCTL_CHILD_PREVIEW_TAB=profiles xcrun simctl launch --terminate-running-process "$DEVICE_UDID" vn.nam.CodexCockpit -AppleLanguages '(vi)' -AppleLocale vi_VN
           sleep 5
           xcrun simctl io "$DEVICE_UDID" screenshot .build/preview/cockpit-accounts.png
-          SIMCTL_CHILD_PREVIEW_TAB=profiles SIMCTL_CHILD_PREVIEW_DEVICE_SHEET=1 xcrun simctl launch --terminate-running-process "$DEVICE_UDID" vn.nam.CodexCockpit
+          SIMCTL_CHILD_PREVIEW_TAB=profiles SIMCTL_CHILD_PREVIEW_DEVICE_SHEET=1 xcrun simctl launch --terminate-running-process "$DEVICE_UDID" vn.nam.CodexCockpit -AppleLanguages '(vi)' -AppleLocale vi_VN
           sleep 5
           xcrun simctl io "$DEVICE_UDID" screenshot .build/preview/cockpit-device-code.png
-          SIMCTL_CHILD_PREVIEW_TAB=settings xcrun simctl launch --terminate-running-process "$DEVICE_UDID" vn.nam.CodexCockpit
+          SIMCTL_CHILD_PREVIEW_TAB=settings xcrun simctl launch --terminate-running-process "$DEVICE_UDID" vn.nam.CodexCockpit -AppleLanguages '(vi)' -AppleLocale vi_VN
           sleep 3
           xcrun simctl io "$DEVICE_UDID" screenshot .build/preview/cockpit-settings.png
+          xcrun simctl launch --terminate-running-process "$DEVICE_UDID" vn.nam.CodexCockpit -AppleLanguages '(en)' -AppleLocale en_US
+          sleep 5
+          xcrun simctl io "$DEVICE_UDID" screenshot .build/preview/cockpit-home-en.png
+          SIMCTL_CHILD_PREVIEW_TAB=profiles xcrun simctl launch --terminate-running-process "$DEVICE_UDID" vn.nam.CodexCockpit -AppleLanguages '(en)' -AppleLocale en_US
+          sleep 5
+          xcrun simctl io "$DEVICE_UDID" screenshot .build/preview/cockpit-accounts-en.png
+          SIMCTL_CHILD_PREVIEW_TAB=profiles SIMCTL_CHILD_PREVIEW_DEVICE_SHEET=1 xcrun simctl launch --terminate-running-process "$DEVICE_UDID" vn.nam.CodexCockpit -AppleLanguages '(en)' -AppleLocale en_US
+          sleep 5
+          xcrun simctl io "$DEVICE_UDID" screenshot .build/preview/cockpit-device-code-en.png
+          SIMCTL_CHILD_PREVIEW_TAB=settings xcrun simctl launch --terminate-running-process "$DEVICE_UDID" vn.nam.CodexCockpit -AppleLanguages '(en)' -AppleLocale en_US
+          sleep 3
+          xcrun simctl io "$DEVICE_UDID" screenshot .build/preview/cockpit-settings-en.png
       - name: Build device app without signing
         run: |
           xcodebuild \

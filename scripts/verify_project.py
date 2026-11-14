@@ -86,6 +86,24 @@ assert "codex login --device-auth" in pc_code_source
 assert "VPS" not in pc_code_source
 assert "beginReauthorization" not in pc_code_source
 
+english_strings = (root / "CodexCockpit/en.lproj/Localizable.strings").read_text(encoding="utf-8")
+vietnamese_strings = (root / "CodexCockpit/vi.lproj/Localizable.strings").read_text(encoding="utf-8")
+for key in (
+    "Nhập code từ PC",
+    "Tiếp tục tự động",
+    "Tổng quan",
+    "Cài đặt",
+    "quota.reset.hours_minutes",
+    "subscription.days",
+    "tibo.status.confirmed",
+):
+    assert f'"{key}"' in english_strings, f"missing English localization: {key}"
+    assert f'"{key}"' in vietnamese_strings, f"missing Vietnamese localization: {key}"
+assert '"Nhập code từ PC" = "Enter code from PC";' in english_strings
+assert '"Tiếp tục tự động" = "Continue automatically";' in english_strings
+assert "developmentLanguage: vi" in (root / "project.yml").read_text(encoding="utf-8")
+assert "cockpit-device-code-en.png" in workflow_text
+
 api_source = (root / "CodexCockpit/Services/CockpitAPI.swift").read_text(encoding="utf-8")
 assert "app-account/create" in api_source
 assert "app-account/delete" in api_source
