@@ -264,15 +264,17 @@ final class ProfileMappingStore: ObservableObject {
         } else {
             webIdentities = [:]
         }
+        let initialProfiles: [WebProfile]
         if let ids = defaults.stringArray(forKey: profileIDsKey), !ids.isEmpty {
-            profiles = ids.map(WebProfile.init(id:))
+            initialProfiles = ids.map(WebProfile.init(id:))
         } else {
             let count = max(5, defaults.integer(forKey: countKey))
-            profiles = (1...count).map { WebProfile(id: String($0)) }
+            initialProfiles = (1...count).map { WebProfile(id: String($0)) }
         }
+        profiles = initialProfiles
         nextProfileNumber = max(
             defaults.integer(forKey: profileSequenceKey),
-            profiles.compactMap { Int($0.id) }.max() ?? 0
+            initialProfiles.compactMap { Int($0.id) }.max() ?? 0
         )
     }
 
