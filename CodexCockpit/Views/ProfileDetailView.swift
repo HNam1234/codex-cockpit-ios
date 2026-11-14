@@ -8,6 +8,7 @@ struct AccountDetailView: View {
     @EnvironmentObject private var router: AppRouter
     @State private var confirmingReset = false
     @State private var resetMessage: String?
+    @State private var showingDeviceAuthorization = false
 
     var body: some View {
         ZStack {
@@ -49,6 +50,25 @@ struct AccountDetailView: View {
         .alert("Reset usage", isPresented: Binding(get: { resetMessage != nil }, set: { if !$0 { resetMessage = nil } })) {
             Button("OK") { resetMessage = nil }
         } message: { Text(resetMessage ?? "") }
+        .sheet(isPresented: $showingDeviceAuthorization) {
+            if let account = store.account(id: accountID) {
+                DeviceAuthorizationSheet(
+                    accountID: accountID,
+                    accountName: mappings.displayIdentity(for: account)
+                ) { session in
+                    router.openBrowser(
+                        accountID: accountID,
+                        launch: BrowserLaunch(
+                            mode: .device,
+                            code: session.userCode,
+                            verificationURL: session.verificationURL
+                        )
+                    )
+                }
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+            }
+        }
     }
 
     private func accountHero(_ account: AccountSnapshot) -> some View {
@@ -58,6 +78,7 @@ struct AccountDetailView: View {
                 Text(mappings.displayIdentity(for: account)).font(.title2.weight(.bold)).lineLimit(1)
                 Text([account.name, account.plan?.uppercased()].compactMap { $0 }.joined(separator: " · "))
                     .font(.subheadline.weight(.medium)).foregroundStyle(.secondary)
+                AccountHealthBadge(health: account.health())
                 if let remaining = account.subscriptionRemainingText() {
                     HStack(spacing: 6) {
                         Label(remaining, systemImage: "calendar.badge.clock")
@@ -114,15 +135,7 @@ struct AccountDetailView: View {
                     Task { await store.refresh(accountID: accountID) }
                 }
                 actionTile("Device code", icon: "key.horizontal.fill", tint: CockpitTheme.violet) {
-                    Task {
-                        if let session = await store.beginReauthorization(accountID: accountID),
-                           let code = session.userCode {
-                            router.openBrowser(
-                                accountID: accountID,
-                                launch: BrowserLaunch(mode: .device, code: code, verificationURL: session.verificationURL)
-                            )
-                        }
-                    }
+                    showingDeviceAuthorization = true
                 }
                 if account.resetCredits > 0, store.capabilities?.resetCredit == true {
                     actionTile("Reset credit · \(account.resetCredits)", icon: "arrow.counterclockwise.circle.fill", tint: CockpitTheme.accent) {

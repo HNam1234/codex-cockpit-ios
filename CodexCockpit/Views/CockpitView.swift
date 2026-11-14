@@ -64,7 +64,12 @@ struct CockpitView: View {
     @ViewBuilder
     private var accountShelf: some View {
         VStack(alignment: .leading, spacing: 8) {
-            SectionHeading(title: "Tài khoản", caption: store.accounts.isEmpty ? nil : "HIỂN THỊ TẤT CẢ")
+            SectionHeading(
+                title: "Tài khoản",
+                caption: store.accounts.isEmpty
+                    ? nil
+                    : (attentionCount > 0 ? "\(attentionCount) CẦN CHÚ Ý" : "TẤT CẢ ĐỀU ỔN")
+            )
             if store.accounts.isEmpty && store.isLoading {
                 ProgressView("Đang tải quota…").frame(maxWidth: .infinity).padding(.vertical, 60)
             } else if store.accounts.isEmpty {
@@ -88,6 +93,10 @@ struct CockpitView: View {
 
     private var errorBinding: Binding<Bool> {
         Binding(get: { store.errorMessage != nil }, set: { if !$0 { store.errorMessage = nil } })
+    }
+
+    private var attentionCount: Int {
+        store.accounts.filter { $0.health().needsAttention }.count
     }
 }
 
@@ -166,8 +175,13 @@ struct AccountOverviewCard: View {
     let displayIdentity: String
 
     var body: some View {
+        let health = account.health()
         HStack(spacing: 9) {
-            ProfileArtwork(seed: account.id, symbol: account.ok ? "command" : "exclamationmark", size: 42)
+            ProfileArtwork(
+                seed: account.id,
+                symbol: health == .healthy ? "command" : health.systemImage,
+                size: 42
+            )
             VStack(alignment: .leading, spacing: 3) {
                 Text(displayIdentity).font(.subheadline.weight(.bold)).lineLimit(1)
                 Text([account.name, account.plan?.uppercased()].compactMap { $0 }.joined(separator: " · "))
@@ -194,6 +208,7 @@ struct AccountOverviewCard: View {
         .padding(.horizontal, 11).padding(.vertical, 8)
         .frame(maxWidth: .infinity, minHeight: 66)
         .glassCard(cornerRadius: 18)
+        .accessibilityValue(health.title)
     }
 }
 
@@ -205,21 +220,28 @@ private struct MiniQuotaRow: View {
     }
 
     var body: some View {
-        VStack(spacing: 3) {
-            HStack(spacing: 3) {
-                Text(window.label).font(.system(size: 9, weight: .bold)).lineLimit(1)
-                Spacer()
-                Text("\(Int(window.remainingPercent.rounded()))%")
-                    .font(.system(size: 9, weight: .heavy, design: .monospaced)).foregroundStyle(color)
-            }
-            GeometryReader { proxy in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(.secondary.opacity(0.12))
-                    Capsule().fill(color)
-                        .frame(width: proxy.size.width * max(0, min(1, window.remainingPercent / 100)))
+        TimelineView(.periodic(from: .now, by: 60)) { context in
+            VStack(spacing: 2) {
+                HStack(spacing: 3) {
+                    Text(window.label).font(.system(size: 9, weight: .bold)).lineLimit(1)
+                    Spacer()
+                    Text("\(Int(window.remainingPercent.rounded()))%")
+                        .font(.system(size: 9, weight: .heavy, design: .monospaced)).foregroundStyle(color)
                 }
+                GeometryReader { proxy in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(.secondary.opacity(0.12))
+                        Capsule().fill(color)
+                            .frame(width: proxy.size.width * max(0, min(1, window.remainingPercent / 100)))
+                    }
+                }
+                .frame(height: 4)
+                Text(window.resetCountdownText(at: context.date, compact: true))
+                    .font(.system(size: 7, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .lineLimit(1)
             }
-            .frame(height: 4)
         }
     }
 }
@@ -233,30 +255,32 @@ struct QuotaProgressRow: View {
     }
 
     var body: some View {
-        VStack(spacing: compact ? 7 : 9) {
-            HStack {
-                Text(window.label).font(compact ? .caption.weight(.bold) : .subheadline.weight(.bold))
-                Spacer()
-                Text("\(Int(window.remainingPercent.rounded()))%")
-                    .font((compact ? Font.caption : Font.subheadline).monospacedDigit().weight(.heavy))
-                    .foregroundStyle(color)
-            }
-            GeometryReader { proxy in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(.secondary.opacity(0.14))
-                    Capsule()
-                        .fill(LinearGradient(colors: [color, color.opacity(0.62)], startPoint: .leading, endPoint: .trailing))
-                        .frame(width: proxy.size.width * max(0, min(1, window.remainingPercent / 100)))
-                }
-            }
-            .frame(height: compact ? 7 : 10)
-            if !compact {
+        TimelineView(.periodic(from: .now, by: 60)) { context in
+            VStack(spacing: compact ? 7 : 9) {
                 HStack {
-                    Text("Đã dùng \(Int(window.usedPercent.rounded()))%")
+                    Text(window.label).font(compact ? .caption.weight(.bold) : .subheadline.weight(.bold))
                     Spacer()
-                    Text("Reset \(Date(timeIntervalSince1970: TimeInterval(window.resetsAt)).formatted(date: .abbreviated, time: .shortened))")
+                    Text("\(Int(window.remainingPercent.rounded()))%")
+                        .font((compact ? Font.caption : Font.subheadline).monospacedDigit().weight(.heavy))
+                        .foregroundStyle(color)
                 }
-                .font(.caption).foregroundStyle(.secondary)
+                GeometryReader { proxy in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(.secondary.opacity(0.14))
+                        Capsule()
+                            .fill(LinearGradient(colors: [color, color.opacity(0.62)], startPoint: .leading, endPoint: .trailing))
+                            .frame(width: proxy.size.width * max(0, min(1, window.remainingPercent / 100)))
+                    }
+                }
+                .frame(height: compact ? 7 : 10)
+                if !compact {
+                    HStack {
+                        Text("Đã dùng \(Int(window.usedPercent.rounded()))%")
+                        Spacer()
+                        Text(window.resetCountdownText(at: context.date))
+                    }
+                    .font(.caption).foregroundStyle(.secondary)
+                }
             }
         }
     }

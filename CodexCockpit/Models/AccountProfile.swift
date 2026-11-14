@@ -49,6 +49,31 @@ struct QuotaWindow: Decodable, Hashable, Identifiable, Sendable {
 
     var id: String { "\(label)-\(windowMinutes)-\(resetsAt)" }
 
+    var resetDate: Date {
+        Date(timeIntervalSince1970: TimeInterval(resetsAt))
+    }
+
+    func resetCountdownText(at now: Date = .now, compact: Bool = false) -> String {
+        let seconds = Int(resetDate.timeIntervalSince(now))
+        guard seconds > 0 else { return compact ? "đang reset" : "Đang cập nhật kỳ mới" }
+
+        let days = seconds / 86_400
+        let hours = (seconds % 86_400) / 3_600
+        let minutes = (seconds % 3_600) / 60
+        if compact {
+            if days > 0 { return hours > 0 ? "\(days)n \(hours)g" : "\(days)n" }
+            if hours > 0 { return minutes > 0 ? "\(hours)g \(minutes)p" : "\(hours)g" }
+            return "\(max(1, minutes))p"
+        }
+        if days > 0 {
+            return hours > 0 ? "Reset sau \(days) ngày \(hours) giờ" : "Reset sau \(days) ngày"
+        }
+        if hours > 0 {
+            return minutes > 0 ? "Reset sau \(hours) giờ \(minutes) phút" : "Reset sau \(hours) giờ"
+        }
+        return "Reset sau \(max(1, minutes)) phút"
+    }
+
     enum CodingKeys: String, CodingKey {
         case label
         case remainingPercent = "remaining_percent"
@@ -56,6 +81,39 @@ struct QuotaWindow: Decodable, Hashable, Identifiable, Sendable {
         case resetsAt = "resets_at"
         case windowMinutes = "window_minutes"
     }
+}
+
+enum AccountHealth: Equatable {
+    case needsLogin
+    case expired
+    case expiring
+    case quotaCritical
+    case quotaLow
+    case healthy
+
+    var title: String {
+        switch self {
+        case .needsLogin: "Cần đăng nhập"
+        case .expired: "Đã hết hạn"
+        case .expiring: "Sắp hết hạn"
+        case .quotaCritical: "Quota rất thấp"
+        case .quotaLow: "Quota sắp hết"
+        case .healthy: "Hoạt động tốt"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .needsLogin: "person.crop.circle.badge.exclamationmark"
+        case .expired: "xmark.circle.fill"
+        case .expiring: "calendar.badge.exclamationmark"
+        case .quotaCritical: "gauge.with.dots.needle.0percent"
+        case .quotaLow: "gauge.with.dots.needle.33percent"
+        case .healthy: "checkmark.circle.fill"
+        }
+    }
+
+    var needsAttention: Bool { self != .healthy }
 }
 
 struct TiboResetStatus: Decodable, Hashable {
@@ -134,6 +192,19 @@ struct AccountSnapshot: Decodable, Identifiable, Hashable, Sendable {
     func subscriptionIsExpired(at now: Date = .now) -> Bool {
         guard let expiration = subscriptionExpirationDate else { return false }
         return expiration <= now
+    }
+
+    func health(at now: Date = .now) -> AccountHealth {
+        guard ok, !windows.isEmpty else { return .needsLogin }
+        if subscriptionIsExpired(at: now) { return .expired }
+        if let expiration = subscriptionExpirationDate,
+           expiration.timeIntervalSince(now) <= 3 * 86_400 {
+            return .expiring
+        }
+        let minimumRemaining = windows.map(\.remainingPercent).min() ?? 100
+        if minimumRemaining <= 10 { return .quotaCritical }
+        if minimumRemaining <= 20 { return .quotaLow }
+        return .healthy
     }
 
     enum CodingKeys: String, CodingKey {

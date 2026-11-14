@@ -98,6 +98,30 @@ struct SectionHeading: View {
     }
 }
 
+struct AccountHealthBadge: View {
+    let health: AccountHealth
+    var compact = false
+
+    private var tint: Color {
+        switch health {
+        case .healthy: .green
+        case .quotaLow, .expiring: .orange
+        case .needsLogin, .expired, .quotaCritical: CockpitTheme.accent
+        }
+    }
+
+    var body: some View {
+        Label(health.title, systemImage: health.systemImage)
+            .font(.system(size: compact ? 8 : 10, weight: .bold))
+            .foregroundStyle(tint)
+            .lineLimit(1)
+            .padding(.horizontal, compact ? 6 : 8)
+            .padding(.vertical, compact ? 3 : 4)
+            .background(tint.opacity(0.11), in: Capsule())
+            .accessibilityLabel("Trạng thái: \(health.title)")
+    }
+}
+
 struct CapsuleActionStyle: ButtonStyle {
     let tint: Color
 

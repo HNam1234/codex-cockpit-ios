@@ -44,7 +44,27 @@ final class SubscriptionStatusTests: XCTestCase {
         XCTAssertTrue(account.subscriptionIsExpired(at: now))
     }
 
-    private func account(expiresAt: Int?) -> AccountSnapshot {
+    func testQuotaResetCountdownUsesReadableAndCompactFormats() {
+        let now = Date(timeIntervalSince1970: 1_000_000)
+        let window = quotaWindow(remaining: 80, resetsAt: 1_000_000 + 2 * 3_600 + 18 * 60)
+
+        XCTAssertEqual(window.resetCountdownText(at: now), "Reset sau 2 giờ 18 phút")
+        XCTAssertEqual(window.resetCountdownText(at: now, compact: true), "2g 18p")
+        XCTAssertEqual(quotaWindow(remaining: 80, resetsAt: 999_999).resetCountdownText(at: now), "Đang cập nhật kỳ mới")
+    }
+
+    func testAccountHealthPrioritizesLoginExpirationAndQuota() {
+        let now = Date(timeIntervalSince1970: 1_000_000)
+
+        XCTAssertEqual(account(expiresAt: 2_000_000, ok: false).health(at: now), .needsLogin)
+        XCTAssertEqual(account(expiresAt: 999_999).health(at: now), .expired)
+        XCTAssertEqual(account(expiresAt: 1_000_000 + 2 * 86_400).health(at: now), .expiring)
+        XCTAssertEqual(account(expiresAt: 2_000_000, remaining: 8).health(at: now), .quotaCritical)
+        XCTAssertEqual(account(expiresAt: 2_000_000, remaining: 18).health(at: now), .quotaLow)
+        XCTAssertEqual(account(expiresAt: 2_000_000, remaining: 80).health(at: now), .healthy)
+    }
+
+    private func account(expiresAt: Int?, ok: Bool = true, remaining: Double = 80) -> AccountSnapshot {
         AccountSnapshot(
             id: "2",
             name: "Codex 2",
@@ -52,11 +72,21 @@ final class SubscriptionStatusTests: XCTestCase {
             email: nil,
             plan: "plus",
             subscriptionExpiresAt: expiresAt,
-            ok: true,
+            ok: ok,
             error: nil,
-            windows: [],
+            windows: [quotaWindow(remaining: remaining, resetsAt: 2_000_000)],
             resetCredits: 0,
             checkedAt: 0
+        )
+    }
+
+    private func quotaWindow(remaining: Double, resetsAt: Int) -> QuotaWindow {
+        QuotaWindow(
+            label: "5 giờ",
+            remainingPercent: remaining,
+            usedPercent: 100 - remaining,
+            resetsAt: resetsAt,
+            windowMinutes: 300
         )
     }
 }

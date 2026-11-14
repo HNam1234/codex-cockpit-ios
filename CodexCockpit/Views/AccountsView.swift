@@ -6,6 +6,8 @@ struct AccountsView: View {
     @EnvironmentObject private var router: AppRouter
     @State private var showingAddAccount = false
     @State private var pendingDelete: AccountSnapshot?
+    @State private var authorizationAccount: AccountSnapshot?
+    @State private var didPresentDevicePreview = false
 
     var body: some View {
         ZStack {
@@ -43,6 +45,31 @@ struct AccountsView: View {
                 Task { await createAndOpenAccount(name: name) }
             }
             .presentationDetents([.medium])
+        }
+        .sheet(item: $authorizationAccount) { account in
+            DeviceAuthorizationSheet(
+                accountID: account.id,
+                accountName: mappings.displayIdentity(for: account),
+                previewSession: previewSession(for: account)
+            ) { session in
+                router.openBrowser(
+                    accountID: account.id,
+                    launch: BrowserLaunch(
+                        mode: .device,
+                        code: session.userCode,
+                        verificationURL: session.verificationURL
+                    )
+                )
+            }
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+        }
+        .onChange(of: store.accounts, initial: true) { _, accounts in
+            guard ProcessInfo.processInfo.environment["PREVIEW_DEVICE_SHEET"] == "1",
+                  !didPresentDevicePreview,
+                  let account = accounts.first(where: { $0.ok }) ?? accounts.first else { return }
+            didPresentDevicePreview = true
+            authorizationAccount = account
         }
         .confirmationDialog(
             "Xóa \(pendingDelete.map { mappings.displayIdentity(for: $0) } ?? "tài khoản")?",
@@ -92,6 +119,7 @@ struct AccountsView: View {
     private func accountCard(_ account: AccountSnapshot) -> some View {
         let profile = mappings.profile(for: account.id)
         let busy = store.busyAccounts.contains(account.id)
+        let health = account.health()
         return VStack(spacing: 11) {
             Button { router.profilePath.append(AppRoute.accountDetail(account.id)) } label: {
                 HStack(spacing: 12) {
@@ -101,10 +129,13 @@ struct AccountsView: View {
                             .font(.headline).foregroundStyle(.primary).lineLimit(1)
                         Text("\(profile.name) · \(account.plan?.uppercased() ?? "CHƯA ĐĂNG NHẬP")")
                             .font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                        if let remaining = account.subscriptionRemainingText() {
-                            Text(remaining)
-                                .font(.caption2.weight(.bold))
-                                .foregroundStyle(account.subscriptionIsExpired() ? .red : CockpitTheme.violet)
+                        HStack(spacing: 5) {
+                            if let remaining = account.subscriptionRemainingText() {
+                                Text(remaining)
+                                    .font(.caption2.weight(.bold))
+                                    .foregroundStyle(account.subscriptionIsExpired() ? .red : CockpitTheme.violet)
+                            }
+                            AccountHealthBadge(health: health, compact: true)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -132,7 +163,7 @@ struct AccountsView: View {
                 }
                 .buttonStyle(CompactAccountActionStyle(tint: .blue))
 
-                Button { Task { await openDeviceCode(for: account.id) } } label: {
+                Button { authorizationAccount = account } label: {
                     Label("Device code", systemImage: "key.horizontal.fill")
                 }
                 .buttonStyle(CompactAccountActionStyle(tint: CockpitTheme.violet))
@@ -162,20 +193,8 @@ struct AccountsView: View {
         guard let account = await store.createAccount(name: name) else { return }
         mappings.createDedicatedProfile(for: account.id)
         showingAddAccount = false
-        await openDeviceCode(for: account.id)
-    }
-
-    private func openDeviceCode(for accountID: String) async {
-        guard let session = await store.beginReauthorization(accountID: accountID),
-              session.status != "failed" else { return }
-        router.openBrowser(
-            accountID: accountID,
-            launch: BrowserLaunch(
-                mode: .device,
-                code: session.userCode,
-                verificationURL: session.verificationURL
-            )
-        )
+        try? await Task.sleep(for: .milliseconds(350))
+        authorizationAccount = account
     }
 
     private func delete(_ account: AccountSnapshot) async {
@@ -187,6 +206,20 @@ struct AccountsView: View {
 
     private var errorBinding: Binding<Bool> {
         Binding(get: { store.errorMessage != nil }, set: { if !$0 { store.errorMessage = nil } })
+    }
+
+    private func previewSession(for account: AccountSnapshot) -> LoginSession? {
+        guard ProcessInfo.processInfo.environment["PREVIEW_DEVICE_SHEET"] == "1" else { return nil }
+        return LoginSession(
+            sessionID: "preview",
+            accountID: account.id,
+            status: "pending",
+            verificationURL: AppURLs.deviceLogin.absoluteString,
+            userCode: "ABCD-EFGH",
+            expiresAt: Int(Date.now.timeIntervalSince1970) + 900,
+            error: nil,
+            account: nil
+        )
     }
 }
 
@@ -249,28 +282,35 @@ private struct AccountQuotaSnapshot: View {
     let windows: [QuotaWindow]
 
     var body: some View {
-        VStack(spacing: 6) {
-            ForEach(windows) { window in
-                VStack(spacing: 3) {
-                    HStack(spacing: 3) {
-                        Text(window.label)
-                            .font(.system(size: 9, weight: .bold)).lineLimit(1)
-                        Spacer(minLength: 2)
-                        Text("\(Int(window.remainingPercent.rounded()))%")
-                            .font(.system(size: 9, weight: .heavy, design: .monospaced))
-                            .foregroundStyle(color(for: window.remainingPercent))
-                    }
-                    GeometryReader { proxy in
-                        ZStack(alignment: .leading) {
-                            Capsule().fill(.secondary.opacity(0.12))
-                            Capsule().fill(color(for: window.remainingPercent))
-                                .frame(
-                                    width: proxy.size.width
-                                        * max(0, min(1, window.remainingPercent / 100))
-                                )
+        TimelineView(.periodic(from: .now, by: 60)) { context in
+            VStack(spacing: 5) {
+                ForEach(windows) { window in
+                    VStack(spacing: 2) {
+                        HStack(spacing: 3) {
+                            Text(window.label)
+                                .font(.system(size: 9, weight: .bold)).lineLimit(1)
+                            Spacer(minLength: 2)
+                            Text("\(Int(window.remainingPercent.rounded()))%")
+                                .font(.system(size: 9, weight: .heavy, design: .monospaced))
+                                .foregroundStyle(color(for: window.remainingPercent))
                         }
+                        GeometryReader { proxy in
+                            ZStack(alignment: .leading) {
+                                Capsule().fill(.secondary.opacity(0.12))
+                                Capsule().fill(color(for: window.remainingPercent))
+                                    .frame(
+                                        width: proxy.size.width
+                                            * max(0, min(1, window.remainingPercent / 100))
+                                    )
+                            }
+                        }
+                        .frame(height: 4)
+                        Text(window.resetCountdownText(at: context.date, compact: true))
+                            .font(.system(size: 7, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                            .lineLimit(1)
                     }
-                    .frame(height: 4)
                 }
             }
         }

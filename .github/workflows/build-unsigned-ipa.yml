@@ -44,6 +44,9 @@ jobs:
           SIMCTL_CHILD_PREVIEW_TAB=profiles xcrun simctl launch --terminate-running-process "$DEVICE_UDID" vn.nam.CodexCockpit
           sleep 5
           xcrun simctl io "$DEVICE_UDID" screenshot .build/preview/cockpit-accounts.png
+          SIMCTL_CHILD_PREVIEW_TAB=profiles SIMCTL_CHILD_PREVIEW_DEVICE_SHEET=1 xcrun simctl launch --terminate-running-process "$DEVICE_UDID" vn.nam.CodexCockpit
+          sleep 5
+          xcrun simctl io "$DEVICE_UDID" screenshot .build/preview/cockpit-device-code.png
           SIMCTL_CHILD_PREVIEW_TAB=settings xcrun simctl launch --terminate-running-process "$DEVICE_UDID" vn.nam.CodexCockpit
           sleep 3
           xcrun simctl io "$DEVICE_UDID" screenshot .build/preview/cockpit-settings.png
