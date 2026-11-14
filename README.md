@@ -18,6 +18,7 @@ SwiftUI app for iOS 17+ with a native quota dashboard and a dynamic number of pe
 - One global TIBO reset banner fetched by the VPS from the public OpenTheRank tracker every 15 minutes. No account data is sent to TIBO or OpenTheRank.
 - Device-code entry opens `auth.openai.com/codex/device` inside the selected profile and attempts to fill the code. The user still confirms on the official OpenAI page.
 - Device code is only copied to the local iPhone clipboard; the app does not upload it.
+- Cockpit Browser OAuth can reuse the already signed-in account in each mapped WebKit without giving the iPhone the PC's token store. Cockpit on the PC remains the OAuth client and token owner.
 - Per-profile clear-session action. The original five data-store UUIDs remain unchanged, so installing an update over the existing app with the same Bundle ID preserves their logins.
 - Launches directly into the dashboard; the unstable startup Face ID gate is disabled.
 - Face ID preference uses a namespaced key so re-signing with a reused bundle ID cannot inherit another app's lock state.
@@ -71,9 +72,22 @@ Do not publish or share the resulting personalized IPA: its embedded credential 
 
 The account list is loaded dynamically and is not capped at five. Install upgrades over the existing app with the same Bundle ID and signing team. Changing the Bundle ID or deleting the app creates/removes the iOS sandbox, so WebKit cookies cannot be carried across that boundary.
 
+## Cockpit Browser OAuth relay (no VPS)
+
+Use this when the account is already signed in to its mapped WebKit and device-code authorization is inconvenient:
+
+1. Start **Browser OAuth** in Cockpit on the PC and copy the OpenAI authorization URL it creates.
+2. On the iPhone, open the matching account and choose **OAuth**. Confirm the displayed WebKit and mapped identity, then paste the URL.
+3. Complete the official OpenAI page in that account's persistent WebKit. The app validates and intercepts Cockpit's loopback callback before iOS tries to open `localhost`.
+4. The exact validated callback is copied locally. Paste it into Cockpit's manual callback field on the PC so Cockpit can finish the code exchange.
+
+The PC keeps the PKCE verifier and receives the tokens; the iPhone receives neither. The app accepts only the exact OpenAI/Cockpit hosts, an HTTP loopback callback, matching port/path/state, and PKCE S256 parameters. Authorization URLs, callback URLs, codes, and state values stay in transient UI/WebKit memory and the local clipboard—they are not persisted or uploaded.
+
+Never share an authorization or callback URL: it is short-lived authentication material. Clear the local callback after Cockpit finishes. Device-code entry remains available as a fallback from the same account card and browser menu.
+
 ## Current validation boundary
 
-The macOS CI workflow builds the IPA and runs the Xcode unit/UI tests. Device-login confirmation still happens on the official OpenAI page; third-party SSO providers may choose to redirect outside embedded web views.
+The macOS CI workflow builds the IPA and runs the Xcode unit/UI tests. Device-login and Cockpit Browser OAuth confirmation still happen on the official OpenAI page; third-party SSO providers may choose to redirect outside embedded web views.
 
 ## Personalized IPA
 
