@@ -20,7 +20,8 @@ struct CockpitView: View {
                         }
                         .padding(.horizontal, 13).padding(.bottom, 18)
                     }
-                    .refreshable { await store.load() }
+                    .scrollBounceBehavior(.always)
+                    .refreshable { await store.refreshAll() }
                 }
             }
         }
@@ -28,7 +29,7 @@ struct CockpitView: View {
         .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button { Task { await store.load() } } label: {
+                Button { Task { await store.refreshAll() } } label: {
                     ZStack {
                         Circle().fill(.thinMaterial).frame(width: 34, height: 34)
                         if store.isLoading { ProgressView().controlSize(.small) }
@@ -48,8 +49,14 @@ struct CockpitView: View {
             Text("CODEX COCKPIT")
                 .font(.caption2.weight(.bold)).tracking(1.5).foregroundStyle(CockpitTheme.accent)
             Text("Quota của bạn").font(.system(size: 29, weight: .bold, design: .rounded))
-            Text("\(store.accounts.count) tài khoản · realtime")
-                .font(.caption).foregroundStyle(.secondary)
+            HStack(spacing: 3) {
+                Text("\(store.accounts.count) tài khoản · realtime")
+                if store.updatedAt > 0 {
+                    Text("· cập nhật")
+                    Text(Date(timeIntervalSince1970: TimeInterval(store.updatedAt)), style: .relative)
+                }
+            }
+            .font(.caption).foregroundStyle(.secondary)
         }
         .padding(.top, 3)
     }

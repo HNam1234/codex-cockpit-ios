@@ -12,14 +12,19 @@ final class CockpitStore: ObservableObject {
     @Published private(set) var loginSessions: [String: LoginSession] = [:]
     @Published var errorMessage: String?
 
-    private let api = CockpitAPI.shared
+    private let api: any CockpitAPIClient
     private var loginTasks: [String: Task<Void, Never>] = [:]
+
+    init(api: any CockpitAPIClient = CockpitAPI.shared) {
+        self.api = api
+    }
 
     func account(id: String) -> AccountSnapshot? {
         accounts.first(where: { $0.id == id })
     }
 
     func load() async {
+        guard !isLoading else { return }
         isLoading = true
         defer { isLoading = false }
         do {
@@ -33,6 +38,45 @@ final class CockpitStore: ObservableObject {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    func refreshAll() async {
+        guard !isLoading else { return }
+        let accountIDs = accounts.map(\.id)
+        guard !accountIDs.isEmpty else {
+            await load()
+            return
+        }
+
+        isLoading = true
+        busyAccounts.formUnion(accountIDs)
+        defer {
+            busyAccounts.subtract(accountIDs)
+            isLoading = false
+        }
+
+        let api = self.api
+        var refreshed: [AccountSnapshot] = []
+        var failureCount = 0
+        await withTaskGroup(of: AccountSnapshot?.self) { group in
+            for accountID in accountIDs {
+                group.addTask {
+                    try? await api.refresh(accountID: accountID)
+                }
+            }
+            for await account in group {
+                if let account {
+                    refreshed.append(account)
+                } else {
+                    failureCount += 1
+                }
+            }
+        }
+
+        refreshed.forEach(replace)
+        errorMessage = failureCount == 0
+            ? nil
+            : "Không thể cập nhật \(failureCount)/\(accountIDs.count) tài khoản. Dữ liệu cũ vẫn được giữ lại."
     }
 
     func refresh(accountID: String) async {

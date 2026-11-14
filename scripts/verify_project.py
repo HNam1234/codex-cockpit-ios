@@ -34,6 +34,10 @@ assert ".task(id: scenePhase)" in root_source
 assert "scenePhase == .active" in root_source
 assert "identityScanner.scan" in root_source
 
+cockpit_source = (root / "CodexCockpit/Views/CockpitView.swift").read_text(encoding="utf-8")
+assert ".refreshable { await store.refreshAll() }" in cockpit_source
+assert ".scrollBounceBehavior(.always)" in cockpit_source
+
 scanner_source = (root / "CodexCockpit/Services/WebIdentityScanner.swift").read_text(encoding="utf-8")
 assert "ProfileDataStore.store" in scanner_source
 assert "AppURLs.chatGPTSession" in scanner_source

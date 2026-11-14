@@ -17,7 +17,15 @@ struct ResetCreditResult {
     let account: AccountSnapshot
 }
 
-actor CockpitAPI {
+protocol CockpitAPIClient: Sendable {
+    func status() async throws -> NativeStatusResponse
+    func refresh(accountID: String) async throws -> AccountSnapshot
+    func startAuthorization(accountID: String) async throws -> LoginSession
+    func authorizationStatus(sessionID: String) async throws -> LoginSession
+    func consumeResetCredit(accountID: String, idempotencyKey: String) async throws -> ResetCreditResult
+}
+
+actor CockpitAPI: CockpitAPIClient {
     static let shared = CockpitAPI()
 
     func status() async throws -> NativeStatusResponse {

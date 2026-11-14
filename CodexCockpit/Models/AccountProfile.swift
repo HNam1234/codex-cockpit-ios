@@ -40,7 +40,7 @@ struct BrowserProfileBinding: Hashable {
     }
 }
 
-struct QuotaWindow: Decodable, Hashable, Identifiable {
+struct QuotaWindow: Decodable, Hashable, Identifiable, Sendable {
     let label: String
     let remainingPercent: Double
     let usedPercent: Double
@@ -98,7 +98,7 @@ struct TiboResetStatus: Decodable, Hashable {
     }
 }
 
-struct AccountSnapshot: Decodable, Identifiable, Hashable {
+struct AccountSnapshot: Decodable, Identifiable, Hashable, Sendable {
     let id: String
     let name: String
     let displayName: String?
