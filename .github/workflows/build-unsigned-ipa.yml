@@ -27,7 +27,13 @@ jobs:
             -scheme CodexCockpit \
             -destination "platform=iOS Simulator,name=$DEVICE" \
             test
-          DEVICE_UDID=$(xcrun simctl list devices booted -j | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; print(next(x["udid"] for runtime in d.values() for x in runtime if x["name"].startswith("iPhone")))')
+
+      - name: Capture simulator preview
+        continue-on-error: true
+        run: |
+          DEVICE=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; print(next(x["name"] for runtime in d.values() for x in runtime if x["name"].startswith("iPhone")))')
+          DEVICE_UDID=$(xcrun simctl list devices available -j | python3 -c 'import json,sys,re; name=sys.argv[1]; d=json.load(sys.stdin)["devices"]; c=[(tuple(map(int,re.findall(r"\d+",runtime))),x["udid"]) for runtime,devices in d.items() if "SimRuntime.iOS" in runtime for x in devices if x["name"] == name]; print(max(c)[1])' "$DEVICE")
+          xcrun simctl boot "$DEVICE_UDID" || true
           xcrun simctl bootstatus "$DEVICE_UDID" -b
           APP_PATH=$(find "$HOME/Library/Developer/Xcode/DerivedData" -path '*/Build/Products/Debug-iphonesimulator/CodexCockpit.app' -print -quit)
           xcrun simctl install "$DEVICE_UDID" "$APP_PATH"
@@ -62,4 +68,4 @@ jobs:
         with:
           name: CodexCockpit-preview
           path: .build/preview/cockpit-home.png
-          if-no-files-found: error
+          if-no-files-found: warn
