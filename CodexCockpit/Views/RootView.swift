@@ -38,8 +38,10 @@ struct RootView: View {
         .environmentObject(mappings)
         .environmentObject(tiboNotifications)
         .onAppear {
-            if ProcessInfo.processInfo.environment["PREVIEW_TAB"] == "profiles" {
-                router.selectedTab = .profiles
+            switch ProcessInfo.processInfo.environment["PREVIEW_TAB"] {
+            case "profiles": router.selectedTab = .profiles
+            case "settings": router.selectedTab = .settings
+            default: break
             }
         }
         .task(id: scenePhase) {
