@@ -131,7 +131,7 @@ struct AccountsView: View {
                             .font(.caption).foregroundStyle(.secondary).lineLimit(1)
                         HStack(spacing: 5) {
                             if let remaining = account.subscriptionRemainingText() {
-                                Text(remaining)
+                                Text(compactSubscriptionText(remaining))
                                     .font(.caption2.weight(.bold))
                                     .foregroundStyle(account.subscriptionIsExpired() ? .red : CockpitTheme.violet)
                             }
@@ -206,6 +206,11 @@ struct AccountsView: View {
 
     private var errorBinding: Binding<Bool> {
         Binding(get: { store.errorMessage != nil }, set: { if !$0 { store.errorMessage = nil } })
+    }
+
+    private func compactSubscriptionText(_ text: String) -> String {
+        if text == "Đã hết hạn" { return "Hết hạn" }
+        return text.hasPrefix("Còn ") ? String(text.dropFirst(4)) : text
     }
 
     private func previewSession(for account: AccountSnapshot) -> LoginSession? {
