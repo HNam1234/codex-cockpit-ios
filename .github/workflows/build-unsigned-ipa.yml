@@ -21,13 +21,12 @@ jobs:
           xcodegen generate
       - name: Unit and UI tests on iOS Simulator
         run: |
-          DEVICE=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; print(next(x["name"] for runtime in d.values() for x in runtime if x["name"].startswith("iPhone")))')
+          DEVICE_UDID=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; print(next(x["udid"] for runtime in d.values() for x in runtime if x["name"].startswith("iPhone")))')
           xcodebuild \
             -project CodexCockpit.xcodeproj \
             -scheme CodexCockpit \
-            -destination "platform=iOS Simulator,name=$DEVICE" \
+            -destination "platform=iOS Simulator,id=$DEVICE_UDID" \
             test
-          DEVICE_UDID=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; name=sys.argv[1]; d=json.load(sys.stdin)["devices"]; print(next(x["udid"] for runtime in d.values() for x in runtime if x["name"] == name))' "$DEVICE")
           xcrun simctl boot "$DEVICE_UDID" || true
           xcrun simctl bootstatus "$DEVICE_UDID" -b
           APP_PATH=$(find "$HOME/Library/Developer/Xcode/DerivedData" -path '*/Build/Products/Debug-iphonesimulator/CodexCockpit.app' -print -quit)
