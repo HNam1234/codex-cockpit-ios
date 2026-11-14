@@ -61,7 +61,7 @@ struct AccountsView: View {
                     )
                 )
             }
-            .presentationDetents([.medium, .large])
+            .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         }
         .onChange(of: store.accounts, initial: true) { _, accounts in
