@@ -1,13 +1,11 @@
 import Foundation
 
 enum CockpitAPIError: LocalizedError {
-    case missingToken
     case invalidResponse
     case server(String)
 
     var errorDescription: String? {
         switch self {
-        case .missingToken: return "Chưa có token kết nối. Hãy nhập token trong Cài đặt."
         case .invalidResponse: return "Phản hồi từ VPS không hợp lệ."
         case .server(let message): return message
         }
@@ -29,11 +27,6 @@ protocol CockpitAPIClient: Sendable {
 
 actor CockpitAPI: CockpitAPIClient {
     static let shared = CockpitAPI()
-    private let credentials: CockpitCredentialStore
-
-    init(credentials: CockpitCredentialStore = .shared) {
-        self.credentials = credentials
-    }
 
     func status() async throws -> NativeStatusResponse {
         try await post("app-status", values: [:], as: NativeStatusResponse.self)
@@ -84,9 +77,8 @@ actor CockpitAPI: CockpitAPIClient {
         request.httpMethod = "POST"
         request.timeoutInterval = 35
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        guard let token = try credentials.load() else { throw CockpitAPIError.missingToken }
         var fields = values
-        fields["k"] = token
+        fields["k"] = AppAuth.cockpitToken
         request.httpBody = fields
             .sorted(by: { $0.key < $1.key })
             .map { "\(Self.formEncode($0.key))=\(Self.formEncode($0.value))" }

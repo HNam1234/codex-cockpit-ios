@@ -7,7 +7,6 @@ struct RootView: View {
     @StateObject private var mappings = ProfileMappingStore()
     @StateObject private var tiboNotifications = TiboNotificationManager()
     @StateObject private var identityScanner = WebIdentityScanner()
-    @StateObject private var credentials = CockpitCredentialModel()
 
     var body: some View {
         TabView(selection: $router.selectedTab) {
@@ -38,11 +37,9 @@ struct RootView: View {
         .environmentObject(store)
         .environmentObject(mappings)
         .environmentObject(tiboNotifications)
-        .environmentObject(credentials)
-        .task(id: "\(scenePhase)-\(credentials.revision)") {
+        .task(id: scenePhase) {
             guard ProcessInfo.processInfo.environment["UITEST_MODE"] == nil,
-                  scenePhase == .active,
-                  credentials.isConfigured else { return }
+                  scenePhase == .active else { return }
             await store.load()
             mappings.synchronize(accounts: store.accounts)
             await identityScanner.scan(profiles: mappings.profiles) { profileID, identity in

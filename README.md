@@ -27,6 +27,7 @@ Requires macOS, Xcode with the iOS 17+ SDK, and XcodeGen:
 
 ```bash
 brew install xcodegen
+COCKPIT_APP_TOKEN=YOUR_PRIVATE_TOKEN python3 scripts/generate_app_auth.py
 xcodegen generate
 open CodexCockpit.xcodeproj
 ```
@@ -62,9 +63,9 @@ Optionally set repository variable `IOS_BUNDLE_ID`. The provisioning profile mus
 
 ## Native dashboard authentication
 
-Public source code, build logs, and release IPAs contain no dashboard credential. On the iPhone, open **Cài đặt → Kết nối VPS**, enter the revocable `COCKPIT_APP_TOKEN` supplied by the deployment administrator, and save it. The token is validated and stored only in that device's iOS Keychain; the app never displays the saved value again.
+This private personal build receives a revocable `COCKPIT_APP_TOKEN` from the private CI secret store. It connects automatically like the original app and does not show a VPS setup screen. The token is posted in the HTTPS request body, never placed in a URL or committed to Git.
 
-The token is posted in the HTTPS request body, never placed in a URL. Disconnecting from Settings removes it from Keychain and clears the loaded dashboard state.
+Do not publish or share the resulting personalized IPA: its embedded credential is extractable by anyone who obtains the file.
 
 The account list is loaded dynamically and is not capped at five. Install upgrades over the existing app with the same Bundle ID and signing team. Changing the Bundle ID or deleting the app creates/removes the iOS sandbox, so WebKit cookies cannot be carried across that boundary.
 
@@ -72,6 +73,6 @@ The account list is loaded dynamically and is not capped at five. Install upgrad
 
 The macOS CI workflow builds the IPA and runs the Xcode unit/UI tests. Device-login confirmation still happens on the official OpenAI page; third-party SSO providers may choose to redirect outside embedded web views.
 
-## Public release IPA
+## Personalized IPA
 
-GitHub Releases publish an **unsigned** IPA built from the tagged public source. It must be re-signed with an Apple Developer certificate or installed through a compatible sideloading service before iOS will run it. A token is entered after installation and is not bundled with the IPA.
+Private CI produces an **unsigned** personalized IPA. It must be re-signed with an Apple Developer certificate or installed through a compatible sideloading service before iOS will run it. Keep the IPA private.
