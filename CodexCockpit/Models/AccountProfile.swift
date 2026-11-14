@@ -309,14 +309,34 @@ struct LoginSession: Decodable, Hashable {
 enum BrowserMode: String, Hashable {
     case web
     case device
+    case cockpitOAuth
 }
 
 struct BrowserLaunch: Hashable {
     let mode: BrowserMode
     let code: String?
     let verificationURL: String?
+    let cockpitOAuthAttempt: CockpitOAuthAttempt?
+
+    init(mode: BrowserMode, code: String?, verificationURL: String?) {
+        self.mode = mode
+        self.code = code
+        self.verificationURL = verificationURL
+        cockpitOAuthAttempt = nil
+    }
+
+    private init(cockpitOAuthAttempt: CockpitOAuthAttempt) {
+        mode = .cockpitOAuth
+        code = nil
+        verificationURL = nil
+        self.cockpitOAuthAttempt = cockpitOAuthAttempt
+    }
 
     static let web = BrowserLaunch(mode: .web, code: nil, verificationURL: nil)
+
+    static func cockpitOAuth(_ attempt: CockpitOAuthAttempt) -> BrowserLaunch {
+        BrowserLaunch(cockpitOAuthAttempt: attempt)
+    }
 }
 
 enum AppRoute: Hashable {

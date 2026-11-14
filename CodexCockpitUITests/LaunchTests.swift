@@ -42,7 +42,7 @@ final class LaunchTests: XCTestCase {
         app.launchEnvironment["PREVIEW_COCKPIT_OAUTH_ENTRY"] = "1"
         app.launch()
 
-        XCTAssertTrue(app.otherElements["cockpit-oauth-entry"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.descendants(matching: .any)["cockpit-oauth-entry"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.staticTexts["cockpit-oauth-identity"].exists)
         let field = app.textFields["cockpit-oauth-url-field"]
         let open = app.buttons["cockpit-oauth-open"]
@@ -61,7 +61,7 @@ final class LaunchTests: XCTestCase {
         app.launchEnvironment["PREVIEW_COCKPIT_OAUTH_RESULT"] = "1"
         app.launch()
 
-        XCTAssertTrue(app.otherElements["cockpit-oauth-result"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.descendants(matching: .any)["cockpit-oauth-result"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.buttons["cockpit-oauth-copy"].exists)
         XCTAssertTrue(app.buttons["cockpit-oauth-clear"].exists)
     }

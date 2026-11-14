@@ -153,3 +153,32 @@
 "Mã chỉ được copy cục bộ và điền vào auth.openai.com trong WebKit đang mở." = "Mã chỉ được copy cục bộ và điền vào auth.openai.com trong WebKit đang mở.";
 "Ủy quyền thiết bị" = "Ủy quyền thiết bị";
 "Mở OpenAI" = "Mở OpenAI";
+
+/* Cockpit OAuth relay */
+"OAuth Cockpit" = "OAuth Cockpit";
+"oauth.relay.action.web" = "Mở WebKit";
+"oauth.relay.action.start" = "Ủy quyền bằng Cockpit";
+"oauth.relay.entry.title" = "OAuth Cockpit";
+"oauth.relay.entry.open" = "Mở trong WebKit này";
+"oauth.relay.entry.paste" = "Dán từ clipboard";
+"oauth.relay.entry.url_label" = "URL ủy quyền từ Cockpit PC";
+"oauth.relay.entry.url_placeholder" = "Dán URL ủy quyền OpenAI";
+"oauth.relay.entry.step_pc" = "Bắt đầu Browser OAuth trong Cockpit trên PC.";
+"oauth.relay.entry.step_copy" = "Copy URL ủy quyền rồi dán vào bên dưới.";
+"oauth.relay.entry.step_local" = "URL và callback chỉ ở trên thiết bị của bạn.";
+"oauth.relay.identity.unknown" = "Chưa có web identity được mapping";
+"oauth.relay.close" = "Đóng";
+"oauth.relay.result.title" = "Đã nhận ủy quyền";
+"oauth.relay.result.ready" = "Callback đã được copy cục bộ";
+"oauth.relay.result.instruction" = "Quay lại Cockpit trên PC và dán callback này vào ô callback thủ công.";
+"oauth.relay.result.copy" = "Copy callback";
+"oauth.relay.result.copied" = "Đã copy callback";
+"oauth.relay.result.clear" = "Xóa callback cục bộ";
+"oauth.relay.error.invalidAuthorizationURL" = "Hãy dán URL ủy quyền hợp lệ từ Cockpit.";
+"oauth.relay.error.unsupportedAuthorizationURL" = "Chỉ chấp nhận URL ủy quyền Cockpit chính thức của OpenAI.";
+"oauth.relay.error.invalidHostedAuthorizationURL" = "URL trung gian của Cockpit bị thiếu hoặc không hợp lệ.";
+"oauth.relay.error.invalidAuthorizationParameters" = "Yêu cầu ủy quyền thiếu tham số bảo mật bắt buộc.";
+"oauth.relay.error.invalidRedirectURI" = "Địa chỉ callback của Cockpit không hợp lệ.";
+"oauth.relay.error.invalidCallback" = "Callback ủy quyền chưa đầy đủ.";
+"oauth.relay.error.callbackMismatch" = "Callback này không thuộc yêu cầu Cockpit hiện tại.";
+"oauth.relay.error.stateMismatch" = "State bảo mật của callback không khớp. Hãy thử lại cùng yêu cầu Cockpit.";

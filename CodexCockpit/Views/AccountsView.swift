@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct AccountsView: View {
     @EnvironmentObject private var store: CockpitStore
@@ -7,7 +8,10 @@ struct AccountsView: View {
     @State private var showingAddAccount = false
     @State private var pendingDelete: AccountSnapshot?
     @State private var authorizationAccount: AccountSnapshot?
+    @State private var cockpitOAuthEntry: CockpitOAuthEntryContext?
+    @State private var previewOAuthCallback: CockpitOAuthCallback?
     @State private var didPresentDevicePreview = false
+    @State private var didPresentOAuthPreview = false
 
     var body: some View {
         ZStack {
@@ -64,6 +68,28 @@ struct AccountsView: View {
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         }
+        .sheet(item: $cockpitOAuthEntry) { context in
+            CockpitOAuthEntrySheet(
+                accountName: context.accountName,
+                identity: context.identity
+            ) { attempt in
+                cockpitOAuthEntry = nil
+                router.openBrowser(
+                    accountID: context.accountID,
+                    launch: .cockpitOAuth(attempt)
+                )
+            }
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $previewOAuthCallback) { callback in
+            CockpitOAuthResultSheet(callback: callback) {
+                clearClipboardIfMatching(callback)
+                previewOAuthCallback = nil
+            }
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+        }
         .onChange(of: store.accounts, initial: true) { _, accounts in
             guard ProcessInfo.processInfo.environment["PREVIEW_DEVICE_SHEET"] == "1",
                   !didPresentDevicePreview,
@@ -71,6 +97,7 @@ struct AccountsView: View {
             didPresentDevicePreview = true
             authorizationAccount = account
         }
+        .onAppear { presentOAuthPreviewIfNeeded() }
         .confirmationDialog(
             L10n.format(
                 "accounts.delete_confirmation",
@@ -163,15 +190,24 @@ struct AccountsView: View {
 
             HStack(spacing: 8) {
                 Button { router.openBrowser(accountID: account.id) } label: {
-                    Label("Mở WebKit", systemImage: "safari.fill")
+                    Label("Web", systemImage: "safari.fill")
                 }
                 .buttonStyle(CompactAccountActionStyle(tint: .blue))
+                .accessibilityLabel(L10n.text("oauth.relay.action.web"))
+
+                Button { openCockpitOAuth(for: account) } label: {
+                    Label("OAuth", systemImage: "link")
+                }
+                .buttonStyle(CompactAccountActionStyle(tint: CockpitTheme.accent))
+                .disabled(busy)
+                .accessibilityLabel(L10n.text("oauth.relay.action.start"))
 
                 Button { authorizationAccount = account } label: {
-                    Label("Code từ PC", systemImage: "key.horizontal.fill")
+                    Label("Code", systemImage: "key.horizontal.fill")
                 }
                 .buttonStyle(CompactAccountActionStyle(tint: CockpitTheme.violet))
                 .disabled(busy)
+                .accessibilityLabel(L10n.text("Code từ PC"))
 
                 Button(role: .destructive) { pendingDelete = account } label: {
                     Image(systemName: "trash.fill").frame(width: 16)
@@ -208,6 +244,39 @@ struct AccountsView: View {
         try? await ProfileDataStore.clear(identifier: profile.dataStoreIdentifier)
     }
 
+    private func openCockpitOAuth(for account: AccountSnapshot) {
+        let profile = mappings.profile(for: account.id)
+        cockpitOAuthEntry = CockpitOAuthEntryContext(
+            accountID: account.id,
+            accountName: profile.name,
+            identity: mappings.webIdentities[profile.id]?.label ?? mappings.displayIdentity(for: account)
+        )
+    }
+
+    private func presentOAuthPreviewIfNeeded() {
+        guard !didPresentOAuthPreview else { return }
+        let environment = ProcessInfo.processInfo.environment
+        if environment["PREVIEW_COCKPIT_OAUTH_ENTRY"] == "1" {
+            didPresentOAuthPreview = true
+            cockpitOAuthEntry = CockpitOAuthEntryContext(
+                accountID: "preview",
+                accountName: "Codex 1",
+                identity: "preview@example.com"
+            )
+        } else if environment["PREVIEW_COCKPIT_OAUTH_RESULT"] == "1",
+                  let url = URL(
+                    string: "http://localhost:1455/auth/callback?code=preview-code&state=preview-state"
+                  ) {
+            didPresentOAuthPreview = true
+            previewOAuthCallback = CockpitOAuthCallback(url: url)
+        }
+    }
+
+    private func clearClipboardIfMatching(_ callback: CockpitOAuthCallback) {
+        guard UIPasteboard.general.string == callback.url.absoluteString else { return }
+        UIPasteboard.general.items = []
+    }
+
     private var errorBinding: Binding<Bool> {
         Binding(get: { store.errorMessage != nil }, set: { if !$0 { store.errorMessage = nil } })
     }
@@ -217,6 +286,14 @@ struct AccountsView: View {
             ? "ABCD-EFGH"
             : nil
     }
+}
+
+private struct CockpitOAuthEntryContext: Identifiable {
+    let accountID: String
+    let accountName: String
+    let identity: String?
+
+    var id: String { accountID }
 }
 
 private struct NewAccountSheet: View {

@@ -9,6 +9,7 @@ struct AccountDetailView: View {
     @State private var confirmingReset = false
     @State private var resetMessage: String?
     @State private var showingDeviceAuthorization = false
+    @State private var showingCockpitOAuth = false
 
     var body: some View {
         ZStack {
@@ -64,6 +65,20 @@ struct AccountDetailView: View {
                             verificationURL: AppURLs.deviceLogin.absoluteString
                         )
                     )
+                }
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+            }
+        }
+        .sheet(isPresented: $showingCockpitOAuth) {
+            if let account = store.account(id: accountID) {
+                let profile = mappings.profile(for: accountID)
+                CockpitOAuthEntrySheet(
+                    accountName: profile.name,
+                    identity: mappings.webIdentities[profile.id]?.label ?? mappings.displayIdentity(for: account)
+                ) { attempt in
+                    showingCockpitOAuth = false
+                    router.openBrowser(accountID: accountID, launch: .cockpitOAuth(attempt))
                 }
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
@@ -140,6 +155,9 @@ struct AccountDetailView: View {
                 actionTile("Nhập code PC", icon: "key.horizontal.fill", tint: CockpitTheme.violet) {
                     showingDeviceAuthorization = true
                 }
+                actionTile("OAuth Cockpit", icon: "link", tint: CockpitTheme.accent) {
+                    showingCockpitOAuth = true
+                }
                 if account.resetCredits > 0, store.capabilities?.resetCredit == true {
                     actionTile(
                         L10n.format("reset.credit_count", account.resetCredits),
@@ -213,8 +231,11 @@ struct AccountBrowserView: View {
     @EnvironmentObject private var mappings: ProfileMappingStore
     @StateObject private var browser = BrowserState()
     @State private var showingCodeEntry = false
+    @State private var showingCockpitOAuth = false
     @State private var showingClear = false
+    @State private var cockpitOAuthResult: CockpitOAuthCallback?
     @State private var webViewGeneration = UUID()
+    @State private var didPrepareCockpitOAuth = false
 
     var body: some View {
         let profile = profileBinding.profile(in: mappings)
@@ -233,6 +254,15 @@ struct AccountBrowserView: View {
             }
             if let code = browser.deviceCode {
                 deviceCodeBar(code)
+            }
+            if let error = browser.errorMessage, error.hasPrefix("oauth.relay.error.") {
+                Label(L10n.text(error), systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.red)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(.thinMaterial)
             }
             Divider()
             HStack {
@@ -254,6 +284,7 @@ struct AccountBrowserView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button("ChatGPT") { browser.open(AppURLs.chatGPT) }
+                    Button("OAuth Cockpit") { showingCockpitOAuth = true }
                     Button("Nhập device code") { showingCodeEntry = true }
                     Button("Xóa session", role: .destructive) { showingClear = true }
                 } label: { Image(systemName: "ellipsis.circle") }
@@ -264,6 +295,15 @@ struct AccountBrowserView: View {
                 browser.prepareDeviceCode(code)
                 UIPasteboard.general.string = DeviceCodeAssistant.normalized(code)
             }
+            if let attempt = launch.cockpitOAuthAttempt, !didPrepareCockpitOAuth {
+                didPrepareCockpitOAuth = true
+                browser.prepareCockpitOAuth(attempt)
+            }
+        }
+        .onChange(of: browser.capturedCockpitOAuthCallback) { _, callback in
+            guard let callback else { return }
+            UIPasteboard.general.string = callback.url.absoluteString
+            cockpitOAuthResult = callback
         }
         .sheet(isPresented: $showingCodeEntry) {
             DeviceCodeSheet { code in
@@ -273,6 +313,26 @@ struct AccountBrowserView: View {
                 showingCodeEntry = false
             }
             .presentationDetents([.medium])
+        }
+        .sheet(isPresented: $showingCockpitOAuth) {
+            CockpitOAuthEntrySheet(
+                accountName: profile.name,
+                identity: mappings.webIdentities[profile.id]?.label
+                    ?? store.account(id: accountID).map { mappings.displayIdentity(for: $0) }
+            ) { attempt in
+                showingCockpitOAuth = false
+                didPrepareCockpitOAuth = true
+                browser.prepareCockpitOAuth(attempt)
+            }
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $cockpitOAuthResult) { callback in
+            CockpitOAuthResultSheet(callback: callback) {
+                clearOAuthCallback(callback)
+            }
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
         }
         .confirmationDialog(
             L10n.format("browser.clear_confirmation", profile.name),
@@ -291,8 +351,22 @@ struct AccountBrowserView: View {
     }
 
     private var initialURL: URL {
+        if let attempt = launch.cockpitOAuthAttempt { return attempt.authorizationURL }
         if let value = launch.verificationURL, let url = URL(string: value) { return url }
         return launch.mode == .device ? AppURLs.deviceLogin : AppURLs.chatGPT
+    }
+
+    private var profile: WebProfile {
+        profileBinding.profile(in: mappings)
+    }
+
+    private func clearOAuthCallback(_ callback: CockpitOAuthCallback) {
+        let callbackValue = callback.url.absoluteString
+        if UIPasteboard.general.string == callbackValue {
+            UIPasteboard.general.items = []
+        }
+        browser.clearCockpitOAuth()
+        cockpitOAuthResult = nil
     }
 
     private func deviceCodeBar(_ code: String) -> some View {

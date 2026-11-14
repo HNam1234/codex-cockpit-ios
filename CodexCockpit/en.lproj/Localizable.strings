@@ -153,3 +153,32 @@
 "Mã chỉ được copy cục bộ và điền vào auth.openai.com trong WebKit đang mở." = "The code is copied locally and entered into auth.openai.com in the current WebKit.";
 "Ủy quyền thiết bị" = "Device authorization";
 "Mở OpenAI" = "Open OpenAI";
+
+/* Cockpit OAuth relay */
+"OAuth Cockpit" = "Cockpit OAuth";
+"oauth.relay.action.web" = "Open WebKit";
+"oauth.relay.action.start" = "Authorize with Cockpit";
+"oauth.relay.entry.title" = "Cockpit OAuth";
+"oauth.relay.entry.open" = "Open in this WebKit";
+"oauth.relay.entry.paste" = "Paste from clipboard";
+"oauth.relay.entry.url_label" = "Authorization URL from Cockpit PC";
+"oauth.relay.entry.url_placeholder" = "Paste the OpenAI authorization URL";
+"oauth.relay.entry.step_pc" = "Start Browser OAuth in Cockpit on your PC.";
+"oauth.relay.entry.step_copy" = "Copy its authorization URL and paste it below.";
+"oauth.relay.entry.step_local" = "The URL and callback stay only on your devices.";
+"oauth.relay.identity.unknown" = "No mapped web identity yet";
+"oauth.relay.close" = "Close";
+"oauth.relay.result.title" = "Authorization captured";
+"oauth.relay.result.ready" = "Callback copied locally";
+"oauth.relay.result.instruction" = "Return to Cockpit on your PC and paste this callback into its manual callback field.";
+"oauth.relay.result.copy" = "Copy callback";
+"oauth.relay.result.copied" = "Callback copied";
+"oauth.relay.result.clear" = "Clear local callback";
+"oauth.relay.error.invalidAuthorizationURL" = "Paste a valid Cockpit authorization URL.";
+"oauth.relay.error.unsupportedAuthorizationURL" = "Only the official OpenAI Cockpit authorization URL is accepted.";
+"oauth.relay.error.invalidHostedAuthorizationURL" = "The Cockpit authorization wrapper is incomplete or invalid.";
+"oauth.relay.error.invalidAuthorizationParameters" = "The authorization request is missing required secure parameters.";
+"oauth.relay.error.invalidRedirectURI" = "The Cockpit callback address is invalid.";
+"oauth.relay.error.invalidCallback" = "The authorization callback is incomplete.";
+"oauth.relay.error.callbackMismatch" = "This callback does not belong to the current Cockpit request.";
+"oauth.relay.error.stateMismatch" = "The callback security state did not match. Retry the same Cockpit request.";
