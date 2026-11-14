@@ -7,20 +7,16 @@ enum WebIdentityBridge {
         functionBody: String,
         in webView: WKWebView
     ) async -> WebAccountIdentity? {
-        await withCheckedContinuation { continuation in
-            webView.callAsyncJavaScript(
+        do {
+            let value = try await webView.callAsyncJavaScript(
                 functionBody,
                 arguments: [:],
                 in: nil,
                 contentWorld: .page
-            ) { result in
-                switch result {
-                case .success(let value):
-                    continuation.resume(returning: WebAccountIdentity(javaScriptValue: value))
-                case .failure:
-                    continuation.resume(returning: nil)
-                }
-            }
+            )
+            return WebAccountIdentity(javaScriptValue: value)
+        } catch {
+            return nil
         }
     }
 
