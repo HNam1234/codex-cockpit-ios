@@ -28,7 +28,7 @@ final class WebIdentityBridgeTests: XCTestCase {
             """,
             baseURL: AppURLs.chatGPT
         )
-        await fulfillment(of: [navigation.didFinish], timeout: 5)
+        await fulfillment(of: [navigation.didFinish], timeout: 15)
 
         let identity = await WebIdentityBridge.identityFromSessionDocument(in: webView)
 

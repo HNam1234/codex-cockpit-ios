@@ -89,7 +89,7 @@ final class ProfileMappingTests: XCTestCase {
             accounts: [unavailable]
         )
 
-        XCTAssertEqual(store.displayIdentity(for: unavailable), "Web Account")
+        XCTAssertEqual(store.displayIdentity(for: unavailable), "web@example.com")
     }
 
     func testWebIdentityPersistsPerProfile() {

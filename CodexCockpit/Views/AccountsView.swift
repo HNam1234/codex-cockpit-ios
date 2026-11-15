@@ -8,7 +8,10 @@ struct AccountsView: View {
     @EnvironmentObject private var directOAuth: DirectOAuthStore
     @State private var pendingDelete: AccountSnapshot?
     @State private var authorizationAccount: AccountSnapshot?
+    @State private var previewOAuthEntry: CockpitOAuthEntryContext?
+    @State private var previewOAuthCallback: CockpitOAuthCallback?
     @State private var didPresentDevicePreview = false
+    @State private var didPresentOAuthPreview = false
 
     var body: some View {
         ZStack {
@@ -59,6 +62,24 @@ struct AccountsView: View {
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         }
+        .sheet(item: $previewOAuthEntry) { context in
+            CockpitOAuthEntrySheet(
+                accountName: context.accountName,
+                identity: context.identity
+            ) { _ in
+                previewOAuthEntry = nil
+            }
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $previewOAuthCallback) { callback in
+            CockpitOAuthResultSheet(callback: callback) {
+                clearClipboardIfMatching(callback)
+                previewOAuthCallback = nil
+            }
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+        }
         .onChange(of: store.accounts, initial: true) { _, accounts in
             guard ProcessInfo.processInfo.environment["PREVIEW_DEVICE_SHEET"] == "1",
                   !didPresentDevicePreview,
@@ -66,6 +87,7 @@ struct AccountsView: View {
             didPresentDevicePreview = true
             authorizationAccount = account
         }
+        .onAppear { presentOAuthPreviewIfNeeded() }
         .confirmationDialog(
             L10n.format(
                 "accounts.delete_confirmation",
@@ -225,6 +247,30 @@ struct AccountsView: View {
         }
     }
 
+    private func presentOAuthPreviewIfNeeded() {
+        guard !didPresentOAuthPreview else { return }
+        let environment = ProcessInfo.processInfo.environment
+        if environment["PREVIEW_COCKPIT_OAUTH_ENTRY"] == "1" {
+            didPresentOAuthPreview = true
+            previewOAuthEntry = CockpitOAuthEntryContext(
+                accountID: "preview",
+                accountName: "WebKit Preview",
+                identity: "preview@example.com"
+            )
+        } else if environment["PREVIEW_COCKPIT_OAUTH_RESULT"] == "1",
+                  let url = URL(
+                    string: "http://localhost:1455/auth/callback?code=preview-code&state=preview-state"
+                  ) {
+            didPresentOAuthPreview = true
+            previewOAuthCallback = CockpitOAuthCallback(url: url)
+        }
+    }
+
+    private func clearClipboardIfMatching(_ callback: CockpitOAuthCallback) {
+        guard UIPasteboard.general.string == callback.url.absoluteString else { return }
+        UIPasteboard.general.items = []
+    }
+
     private var errorBinding: Binding<Bool> {
         Binding(get: { store.errorMessage != nil }, set: { if !$0 { store.errorMessage = nil } })
     }
@@ -234,6 +280,14 @@ struct AccountsView: View {
             ? "ABCD-EFGH"
             : nil
     }
+}
+
+private struct CockpitOAuthEntryContext: Identifiable {
+    let accountID: String
+    let accountName: String
+    let identity: String?
+
+    var id: String { accountID }
 }
 
 private struct CompactAccountActionStyle: ButtonStyle {
