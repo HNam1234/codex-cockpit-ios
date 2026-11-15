@@ -147,7 +147,7 @@ enum VerificationCodeExtractor {
         let patterns = [
             #"\b\d{4}[-/]\d{1,2}[-/]\d{1,2}\b"#,
             #"[$€£₫]\s*\d+(?:[.,]\d+)*"#,
-            #"\b(?:\d[\s().-]*){9,15}\b"#,
+            #"(?i)\b(?:phone|tel|mobile|điện thoại)\s*:?\s*\+?(?:\d[\s().-]*){9,15}\b"#,
             #"\b[A-Za-z0-9]{9,}\b"#
         ]
         return patterns.reduce(value) { partial, pattern in
