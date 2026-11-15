@@ -2,6 +2,11 @@ name: Build unsigned IPA
 
 on:
   workflow_dispatch:
+    inputs:
+      capture_preview:
+        description: Capture the full bilingual simulator preview set
+        type: boolean
+        default: true
   push:
     branches: [main]
 
@@ -29,7 +34,9 @@ jobs:
             test
 
       - name: Capture simulator preview
+        if: github.event_name != 'workflow_dispatch' || inputs.capture_preview
         continue-on-error: true
+        timeout-minutes: 5
         run: |
           DEVICE=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; print(next(x["name"] for runtime in d.values() for x in runtime if x["name"].startswith("iPhone")))')
           DEVICE_UDID=$(xcrun simctl list devices available -j | python3 -c 'import json,sys,re; name=sys.argv[1]; d=json.load(sys.stdin)["devices"]; c=[(tuple(map(int,re.findall(r"\d+",runtime))),x["udid"]) for runtime,devices in d.items() if "SimRuntime.iOS" in runtime for x in devices if x["name"] == name]; print(max(c)[1])' "$DEVICE")
