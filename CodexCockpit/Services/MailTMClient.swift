@@ -75,10 +75,10 @@ protocol DisposableMailServing: Sendable {
 final class MailTMRedirectGuard: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
     static func isAllowed(_ url: URL) -> Bool {
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return false }
+        let hasCredentials = components.user != nil || components.password != nil
         return components.scheme?.lowercased() == "https"
             && components.host?.lowercased() == "api.mail.tm"
-            && components.user == nil
-            && components.password == nil
+            && !hasCredentials
             && (components.port == nil || components.port == 443)
     }
 
