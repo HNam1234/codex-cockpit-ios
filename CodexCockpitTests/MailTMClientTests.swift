@@ -276,7 +276,22 @@ private final class MailTMRequestRecorder: @unchecked Sendable {
     }
 
     func append(_ request: URLRequest) {
-        lock.withLock { storage.append(request) }
+        var snapshot = request
+        if snapshot.httpBody == nil, let stream = request.httpBodyStream {
+            stream.open()
+            defer { stream.close() }
+
+            var body = Data()
+            var buffer = [UInt8](repeating: 0, count: 4_096)
+            while stream.hasBytesAvailable {
+                let count = stream.read(&buffer, maxLength: buffer.count)
+                guard count > 0 else { break }
+                body.append(contentsOf: buffer.prefix(count))
+            }
+            snapshot.httpBody = body
+        }
+
+        lock.withLock { storage.append(snapshot) }
     }
 }
 
