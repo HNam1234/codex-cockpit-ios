@@ -7,6 +7,21 @@ final class LocalizationTests: XCTestCase {
         XCTAssertEqual(L10n.text("Tiếp tục tự động", language: "en"), "Continue automatically")
         XCTAssertEqual(L10n.text("Tổng quan", language: "en"), "Overview")
         XCTAssertEqual(L10n.text("Cài đặt", language: "en"), "Settings")
+        XCTAssertEqual(L10n.text("mail.tab", language: "en"), "Mail")
+        XCTAssertEqual(L10n.text("mail.tab", language: "vi"), "Thư")
+    }
+
+    func testDisposableMailCopyExistsInBothLanguages() {
+        XCTAssertEqual(L10n.text("mail.empty.title", language: "en"), "No temporary mailboxes")
+        XCTAssertEqual(L10n.text("mail.empty.title", language: "vi"), "Chưa có hộp thư tạm")
+        XCTAssertEqual(L10n.text("mail.create.title", language: "en"), "New temporary mailbox")
+        XCTAssertEqual(L10n.text("mail.create.title", language: "vi"), "Tạo hộp thư tạm")
+        XCTAssertEqual(L10n.text("mail.lifetime.60", language: "en"), "60 days")
+        XCTAssertEqual(L10n.text("mail.lifetime.60", language: "vi"), "60 ngày")
+        XCTAssertEqual(L10n.text("mail.code.copy", language: "en"), "Copy code")
+        XCTAssertEqual(L10n.text("mail.code.copy", language: "vi"), "Copy mã")
+        XCTAssertEqual(L10n.text("mail.provider.attribution", language: "en"), "Mail service by Mail.tm")
+        XCTAssertEqual(L10n.text("mail.provider.attribution", language: "vi"), "Dịch vụ thư bởi Mail.tm")
     }
 
     func testEnglishDynamicQuotaAndSubscriptionCopyExists() {

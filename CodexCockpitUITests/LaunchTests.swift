@@ -12,6 +12,7 @@ final class LaunchTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["cockpit-ready"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.tabBars.buttons["Tổng quan"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.tabBars.buttons["WebKit"].exists)
+        XCTAssertTrue(app.tabBars.buttons["Thư"].exists)
         XCTAssertTrue(app.tabBars.buttons["Cài đặt"].exists)
         XCTAssertFalse(app.buttons["Mở bằng Face ID / mật mã"].exists)
     }
@@ -33,7 +34,48 @@ final class LaunchTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["cockpit-ready"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.tabBars.buttons["Overview"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.tabBars.buttons["WebKit"].exists)
+        XCTAssertTrue(app.tabBars.buttons["Mail"].exists)
         XCTAssertTrue(app.tabBars.buttons["Settings"].exists)
+    }
+
+    func testMailEmptyStateAndCreateSheetDefaultToSixtyDays() {
+        let app = localizedApp(language: "en", locale: "en_US", mode: "static")
+        app.launchEnvironment["PREVIEW_TAB"] = "mail"
+        app.launch()
+
+        XCTAssertTrue(app.descendants(matching: .any)["mail-empty"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.descendants(matching: .any)["mail-attribution"].exists)
+        let create = app.buttons["mail-create"]
+        XCTAssertTrue(create.exists)
+        create.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["mail-create-sheet"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.buttons["mail-lifetime-60"].value as? String, "selected")
+    }
+
+    func testMailSampleShowsMappingInboxSafeMessageCodesAndAttachmentMetadata() {
+        let app = localizedApp(language: "en", locale: "en_US", mode: "static")
+        app.launchEnvironment["PREVIEW_TAB"] = "mail"
+        app.launchEnvironment["PREVIEW_MAIL_SAMPLE"] = "1"
+        app.launch()
+
+        let card = app.buttons["mail-card"]
+        XCTAssertTrue(card.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["preview@example.test"].exists)
+        XCTAssertTrue(app.staticTexts["preview.account@example.com · WebKit 1"].exists)
+        XCTAssertTrue(app.staticTexts["1 unread"].exists)
+        card.tap()
+
+        XCTAssertTrue(app.descendants(matching: .any)["mail-inbox"].waitForExistence(timeout: 5))
+        let message = app.buttons["mail-message-row"]
+        XCTAssertTrue(message.exists)
+        XCTAssertTrue(app.staticTexts["Verify your account"].exists)
+        message.tap()
+
+        XCTAssertTrue(app.descendants(matching: .any)["mail-message-detail"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["mail-code-482731"].exists)
+        XCTAssertTrue(app.buttons["mail-code-A9K2"].exists)
+        XCTAssertTrue(app.staticTexts["Your verification code is 482731. Backup code A9K2."].exists)
+        XCTAssertTrue(app.staticTexts["notice.txt"].exists)
     }
 
     func testCockpitOAuthEntryValidatesBeforeOpeningWebKit() {
