@@ -10,6 +10,7 @@ struct AccountDetailView: View {
     @State private var confirmingReset = false
     @State private var resetMessage: String?
     @State private var showingDeviceAuthorization = false
+    @State private var isStartingQuotaLogin = false
 
     var body: some View {
         ZStack {
@@ -40,6 +41,14 @@ struct AccountDetailView: View {
         .navigationTitle("Chi tiết")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.hidden, for: .navigationBar)
+        .alert("Không thể hoàn tất", isPresented: Binding(
+            get: { store.errorMessage != nil },
+            set: { if !$0 { store.errorMessage = nil } }
+        )) {
+            Button("OK") { store.errorMessage = nil }
+        } message: {
+            Text(store.errorMessage ?? "Lỗi không xác định")
+        }
         .confirmationDialog("Dùng một reset credit cho tài khoản này?", isPresented: $confirmingReset) {
             Button("Xác nhận reset", role: .destructive) {
                 Task {
@@ -119,10 +128,17 @@ struct AccountDetailView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 Button { startQuotaLogin() } label: {
-                    Label(L10n.text("quota.login.action"), systemImage: "person.badge.key.fill")
+                    if isStartingQuotaLogin {
+                        HStack {
+                            ProgressView().tint(.white)
+                            Text(L10n.text("quota.login.starting"))
+                        }
+                    } else {
+                        Label(L10n.text("quota.login.action"), systemImage: "person.badge.key.fill")
+                    }
                 }
                 .buttonStyle(CapsuleActionStyle(tint: CockpitTheme.accent))
-                .disabled(store.busyAccounts.contains(accountID))
+                .disabled(isStartingQuotaLogin)
             } else {
                 ForEach(account.windows) { window in QuotaProgressRow(window: window) }
             }
@@ -236,8 +252,11 @@ struct AccountDetailView: View {
     }
 
     private func startQuotaLogin() {
+        guard !isStartingQuotaLogin else { return }
+        isStartingQuotaLogin = true
         mappings.createDedicatedProfile(for: accountID)
         Task {
+            defer { isStartingQuotaLogin = false }
             guard let session = await store.beginReauthorization(accountID: accountID) else { return }
             guard session.status != "failed",
                   let code = session.userCode,

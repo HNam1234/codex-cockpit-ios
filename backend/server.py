@@ -613,7 +613,7 @@ class AppActionBridge:
         with self.lock:
             for session in self.logins.values():
                 if session["account_id"] == account_id and session["status"] in ("creating", "waiting"):
-                    return dict(session)
+                    return {key: value for key, value in session.items() if key != "ready"}
             session_id = str(uuid.uuid4())
             session: dict[str, Any] = {
                 "session_id": session_id,

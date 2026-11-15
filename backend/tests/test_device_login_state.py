@@ -9,6 +9,25 @@ from backend.server import AppActionBridge, status_payload
 
 
 class DeviceLoginStateTests(unittest.TestCase):
+    def test_reopening_waiting_login_returns_json_serializable_device_code(self):
+        bridge = AppActionBridge.__new__(AppActionBridge)
+        bridge.lock = threading.Lock()
+        bridge._config_and_account = lambda account_id: ({}, {"id": account_id})
+        bridge.logins = {"existing": {
+            "session_id": "existing",
+            "account_id": "2",
+            "status": "waiting",
+            "user_code": "ABCD-EFGH",
+            "ready": threading.Event(),
+        }}
+
+        result = bridge.start_login("2")
+        response = json.loads(json.dumps({"ok": True, "login": result}))
+
+        self.assertEqual(response["login"]["user_code"], "ABCD-EFGH")
+        self.assertNotIn("ready", response["login"])
+        self.assertEqual(len(bridge.logins), 1)
+
     def test_successful_device_login_persists_quota_for_next_status_load(self):
         class Client:
             def __enter__(self): return self

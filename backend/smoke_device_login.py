@@ -17,7 +17,11 @@ try:
     session = bridge.start_login(account['id'])
     if session['status'] != 'waiting' or not session.get('user_code'):
         raise RuntimeError('Device login did not issue a code')
+    reopened = json.loads(json.dumps(bridge.start_login(account['id'])))
+    if reopened.get('user_code') != session['user_code']:
+        raise RuntimeError('Reopening login did not return the existing code')
     print(json.dumps({'device_code_issued': True, 'status': session['status']}))
+    print(json.dumps({'repeated_start_serializable': True, 'same_code_returned': True}))
 finally:
     bridge.delete_account(account['id'])
 after = {str(a['id']) for a in server.read_json(server.CONFIG_PATH, {})['accounts']}
