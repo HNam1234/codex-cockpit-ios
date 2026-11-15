@@ -151,7 +151,10 @@ struct AccountsView: View {
     private func accountCard(_ account: AccountSnapshot) -> some View {
         let profile = mappings.profile(for: account.id)
         let busy = store.busyAccounts.contains(account.id)
-        let health = account.health()
+        let hasDirectOAuthRegistration = directOAuth.hasRegistration(for: profile.id)
+        let health = account.health(
+            hasDirectOAuthRegistration: hasDirectOAuthRegistration
+        )
         return VStack(spacing: 11) {
             Button { router.profilePath.append(AppRoute.accountDetail(account.id)) } label: {
                 HStack(spacing: 12) {
@@ -175,13 +178,19 @@ struct AccountsView: View {
                     Spacer(minLength: 4)
                     if busy {
                         ProgressView().controlSize(.small)
-                    } else if account.ok, !account.windows.isEmpty {
+                    } else if account.isAuthenticated(
+                        hasDirectOAuthRegistration: hasDirectOAuthRegistration
+                    ), !account.windows.isEmpty {
                         AccountQuotaSnapshot(windows: Array(account.windows.prefix(2)))
                             .frame(width: 105)
-                    } else if account.ok, account.isLocalDirect {
-                        Image(systemName: "checkmark.shield.fill")
-                            .font(.title3)
-                            .foregroundStyle(.green)
+                    } else if hasDirectOAuthRegistration || (account.ok && account.isLocalDirect) {
+                        Label(
+                            L10n.text("oauth.direct.connected.compact"),
+                            systemImage: "checkmark.shield.fill"
+                        )
+                        .labelStyle(.iconOnly)
+                        .font(.title3)
+                        .foregroundStyle(.green)
                     } else {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundStyle(.red)

@@ -202,6 +202,23 @@ final class DirectOAuthFlowTests: XCTestCase {
         ))
     }
 
+    @MainActor
+    func testStoreRestoresExistingRegistrationFromKeychain() throws {
+        let profileID = "test-\(UUID().uuidString.lowercased())"
+        let vault = DirectOAuthCredentialVault()
+        let registration = fixtureRegistration(profileID: profileID)
+        defer { try? vault.delete(profileID: profileID) }
+        try vault.save(registration)
+
+        let store = DirectOAuthStore(vault: vault)
+        XCTAssertFalse(store.hasRegistration(for: profileID))
+
+        store.restore(profileIDs: [profileID])
+
+        XCTAssertTrue(store.hasRegistration(for: profileID))
+        XCTAssertEqual(store.registrations[profileID]?.email, registration.email)
+    }
+
     private func newAttempt() throws -> DirectOAuthAttempt {
         try DirectOAuthFlow.makeAttempt(
             hostID: hostID,
@@ -212,9 +229,9 @@ final class DirectOAuthFlowTests: XCTestCase {
         )
     }
 
-    private func fixtureRegistration() -> DirectOAuthRegistration {
+    private func fixtureRegistration(profileID: String = "1") -> DirectOAuthRegistration {
         DirectOAuthRegistration(
-            profileID: "1",
+            profileID: profileID,
             clientID: "oaiapp_existing",
             subject: "subject-existing",
             email: "existing@example.com",

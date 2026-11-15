@@ -38,6 +38,11 @@ final class CockpitStoreTests: XCTestCase {
         XCTAssertEqual(connected.identity, "person@example.com")
         XCTAssertEqual(connected.health(), .healthy)
 
+        store.disconnectLocalOAuth(accountID: pending.id)
+        let disconnected = try XCTUnwrap(store.account(id: pending.id))
+        XCTAssertFalse(disconnected.ok)
+        XCTAssertEqual(disconnected.health(), .needsLogin)
+
         await store.refreshAll()
         let requestedAccountIDs = await api.requestedAccountIDs()
         XCTAssertTrue(requestedAccountIDs.isEmpty)

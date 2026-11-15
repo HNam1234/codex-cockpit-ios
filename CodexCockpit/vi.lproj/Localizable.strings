@@ -164,6 +164,10 @@
 "Email đã xác minh này là tên account. Token chỉ lưu trong Keychain cục bộ trên iPhone." = "Email đã xác minh này là tên account. Token chỉ lưu trong Keychain cục bộ trên iPhone.";
 "Tiếp tục vào ChatGPT" = "Tiếp tục vào ChatGPT";
 "Quota số chưa có cho account local. WebKit và email vẫn hoạt động độc lập." = "Quota số chưa có cho account local. WebKit và email vẫn hoạt động độc lập.";
+"oauth.direct.connected.compact" = "Đã kết nối";
+"quota.direct.connected_no_numeric" = "ChatGPT đã kết nối. OpenAI chưa cung cấp quota số 5 giờ/tuần qua API OAuth trực tiếp công khai.";
+"quota.manage_usage" = "Xem Usage chính thức";
+"quota.unavailable.sign_in" = "Chưa có dữ liệu quota. Hãy đăng nhập hoặc ủy quyền lại tài khoản này.";
 "oauth.direct.pending_account" = "Đang chờ email xác minh";
 "oauth.direct.error.invalidHostID" = "Định danh cục bộ của app không hợp lệ. Hãy cài lại hoặc đặt lại app rồi thử lại.";
 "oauth.direct.error.invalidEntropy" = "Không thể tạo yêu cầu ủy quyền bảo mật.";

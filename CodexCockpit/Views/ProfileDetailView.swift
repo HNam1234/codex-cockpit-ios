@@ -17,10 +17,19 @@ struct AccountDetailView: View {
         ZStack {
             CockpitBackdrop()
             if let account = store.account(id: accountID) {
+                let hasDirectOAuthRegistration = directOAuth.hasRegistration(
+                    for: mappings.profile(for: account.id).id
+                )
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 22) {
-                        accountHero(account)
-                        quotaCard(account)
+                        accountHero(
+                            account,
+                            hasDirectOAuthRegistration: hasDirectOAuthRegistration
+                        )
+                        quotaCard(
+                            account,
+                            hasDirectOAuthRegistration: hasDirectOAuthRegistration
+                        )
                         webKitCard
                         temporaryMailCard(account)
                         actionGrid(account)
@@ -89,7 +98,10 @@ struct AccountDetailView: View {
         }
     }
 
-    private func accountHero(_ account: AccountSnapshot) -> some View {
+    private func accountHero(
+        _ account: AccountSnapshot,
+        hasDirectOAuthRegistration: Bool
+    ) -> some View {
         VStack(spacing: 13) {
             ProfileArtwork(seed: account.id, symbol: "command", size: 118)
             VStack(spacing: 4) {
@@ -99,7 +111,9 @@ struct AccountDetailView: View {
                       : [account.name, account.plan?.uppercased()])
                     .compactMap { $0 }.joined(separator: " · "))
                     .font(.subheadline.weight(.medium)).foregroundStyle(.secondary)
-                AccountHealthBadge(health: account.health())
+                AccountHealthBadge(health: account.health(
+                    hasDirectOAuthRegistration: hasDirectOAuthRegistration
+                ))
                 if let remaining = account.subscriptionRemainingText() {
                     HStack(spacing: 6) {
                         Label(remaining, systemImage: "calendar.badge.clock")
@@ -116,23 +130,45 @@ struct AccountDetailView: View {
                     }
                 }
             }
-            if let error = account.error, !account.ok {
+            if let error = account.error,
+               !account.isAuthenticated(
+                hasDirectOAuthRegistration: hasDirectOAuthRegistration
+               ) {
                 Label(error, systemImage: "exclamationmark.triangle.fill").font(.caption).foregroundStyle(.red)
             }
         }
         .frame(maxWidth: .infinity).padding(.top, 10)
     }
 
-    private func quotaCard(_ account: AccountSnapshot) -> some View {
+    private func quotaCard(
+        _ account: AccountSnapshot,
+        hasDirectOAuthRegistration: Bool
+    ) -> some View {
         VStack(alignment: .leading, spacing: 18) {
             SectionHeading(title: "Quota", caption: "Còn lại")
             if account.windows.isEmpty {
-                Label(
-                    "Quota số chưa có cho account local. WebKit và email vẫn hoạt động độc lập.",
-                    systemImage: "gauge.with.dots.needle.33percent"
-                )
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+                if hasDirectOAuthRegistration {
+                    Label(
+                        L10n.text("quota.direct.connected_no_numeric"),
+                        systemImage: "checkmark.shield.fill"
+                    )
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    Link(destination: AppURLs.chatGPTUsage) {
+                        Label(
+                            L10n.text("quota.manage_usage"),
+                            systemImage: "arrow.up.right.square"
+                        )
+                        .font(.subheadline.weight(.bold))
+                    }
+                } else {
+                    Label(
+                        L10n.text("quota.unavailable.sign_in"),
+                        systemImage: "gauge.with.dots.needle.33percent"
+                    )
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                }
             } else {
                 ForEach(account.windows) { window in QuotaProgressRow(window: window) }
             }
@@ -449,6 +485,7 @@ struct AccountBrowserView: View {
                     browser.webView = nil
                     try? await ProfileDataStore.clear(identifier: profile.dataStoreIdentifier)
                     try? directOAuth.clear(profileID: profile.id)
+                    store.disconnectLocalOAuth(accountID: accountID)
                     mappings.clearIdentity(for: profile.id)
                     webViewGeneration = UUID()
                 }

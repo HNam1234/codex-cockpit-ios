@@ -233,8 +233,28 @@ struct AccountSnapshot: Decodable, Identifiable, Hashable, Sendable {
         return expiration <= now
     }
 
-    func health(at now: Date = .now) -> AccountHealth {
-        if isLocalDirect { return ok ? .healthy : .needsLogin }
+    func isAuthenticated(hasDirectOAuthRegistration: Bool = false) -> Bool {
+        ok || hasDirectOAuthRegistration
+    }
+
+    func health(
+        at now: Date = .now,
+        hasDirectOAuthRegistration: Bool = false
+    ) -> AccountHealth {
+        if isLocalDirect || hasDirectOAuthRegistration {
+            guard isAuthenticated(hasDirectOAuthRegistration: hasDirectOAuthRegistration) else {
+                return .needsLogin
+            }
+            if subscriptionIsExpired(at: now) { return .expired }
+            if let expiration = subscriptionExpirationDate,
+               expiration.timeIntervalSince(now) <= 3 * 86_400 {
+                return .expiring
+            }
+            let minimumRemaining = windows.map(\.remainingPercent).min() ?? 100
+            if minimumRemaining <= 10 { return .quotaCritical }
+            if minimumRemaining <= 20 { return .quotaLow }
+            return .healthy
+        }
         guard ok, !windows.isEmpty else { return .needsLogin }
         if subscriptionIsExpired(at: now) { return .expired }
         if let expiration = subscriptionExpirationDate,
@@ -565,6 +585,7 @@ final class ProfileMappingStore: ObservableObject {
 enum AppURLs {
     static let base = URL(string: "https://mach-dns.tail2e377d.ts.net/codex/")!
     static let chatGPT = URL(string: "https://chatgpt.com/")!
+    static let chatGPTUsage = URL(string: "https://chatgpt.com/settings/usage")!
     static let chatGPTSession = URL(string: "https://chatgpt.com/api/auth/session")!
     static let deviceLogin = URL(string: "https://auth.openai.com/codex/device")!
 

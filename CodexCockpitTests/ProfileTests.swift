@@ -25,6 +25,10 @@ final class ProfileTests: XCTestCase {
         XCTAssertEqual(AppURLs.deviceLogin.path, "/codex/device")
     }
 
+    func testUsageLinkOpensOfficialChatGPTSettings() {
+        XCTAssertEqual(AppURLs.chatGPTUsage.absoluteString, "https://chatgpt.com/settings/usage")
+    }
+
     func testStatusPollingIntervalIsClampedToSafeActiveRange() {
         XCTAssertEqual(CockpitStore.clampedPollSeconds(0), 60)
         XCTAssertEqual(CockpitStore.clampedPollSeconds(30), 60)

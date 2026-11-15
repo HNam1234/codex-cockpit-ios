@@ -164,6 +164,10 @@
 "Email đã xác minh này là tên account. Token chỉ lưu trong Keychain cục bộ trên iPhone." = "This verified email is the account name. Tokens stay only in the local iPhone Keychain.";
 "Tiếp tục vào ChatGPT" = "Continue to ChatGPT";
 "Quota số chưa có cho account local. WebKit và email vẫn hoạt động độc lập." = "Numeric quota is not available for this local account. Its WebKit and email still work independently.";
+"oauth.direct.connected.compact" = "Connected";
+"quota.direct.connected_no_numeric" = "ChatGPT is connected. OpenAI does not expose the numeric 5-hour/weekly quota through the public direct OAuth API.";
+"quota.manage_usage" = "View official Usage";
+"quota.unavailable.sign_in" = "No quota data is available yet. Sign in or authorize this account again.";
 "oauth.direct.pending_account" = "Waiting for verified email";
 "oauth.direct.error.invalidHostID" = "The local app identity is invalid. Reinstall or reset the app and retry.";
 "oauth.direct.error.invalidEntropy" = "Could not create a secure authorization request.";

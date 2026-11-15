@@ -526,6 +526,22 @@ final class DirectOAuthStore: ObservableObject {
         return loaded
     }
 
+    func restore(profileIDs: [String]) {
+        var restored = registrations
+        for profileID in profileIDs where restored[profileID] == nil {
+            if let registration = try? vault.load(profileID: profileID) {
+                restored[profileID] = registration
+            }
+        }
+        if restored != registrations {
+            registrations = restored
+        }
+    }
+
+    func hasRegistration(for profileID: String) -> Bool {
+        registrations[profileID] != nil
+    }
+
     func prepare(profileID: String) throws -> DirectOAuthAttempt {
         try DirectOAuthFlow.prepare(hostID: hostID, registration: registration(for: profileID))
     }

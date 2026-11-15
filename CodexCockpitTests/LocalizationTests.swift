@@ -29,11 +29,15 @@ final class LocalizationTests: XCTestCase {
         XCTAssertEqual(L10n.format("subscription.days", 3, language: "en"), "3 days remaining")
         XCTAssertEqual(L10n.text("health.needs_login", language: "en"), "Sign in required")
         XCTAssertEqual(L10n.text("tibo.status.confirmed", language: "en"), "CONFIRMED")
+        XCTAssertEqual(L10n.text("oauth.direct.connected.compact", language: "en"), "Connected")
+        XCTAssertEqual(L10n.text("quota.manage_usage", language: "en"), "View official Usage")
     }
 
     func testVietnameseRemainsAvailable() {
         XCTAssertEqual(L10n.text("Nhập code từ PC", language: "vi"), "Nhập code từ PC")
         XCTAssertEqual(L10n.format("subscription.days", 3, language: "vi"), "Còn 3 ngày")
+        XCTAssertEqual(L10n.text("oauth.direct.connected.compact", language: "vi"), "Đã kết nối")
+        XCTAssertEqual(L10n.text("quota.manage_usage", language: "vi"), "Xem Usage chính thức")
     }
 
     func testCockpitOAuthRelayCopyExistsInBothLanguages() {

@@ -81,6 +81,7 @@ struct RootView: View {
         .environmentObject(tiboNotifications)
         .environmentObject(mailStore)
         .onAppear {
+            directOAuth.restore(profileIDs: mappings.profiles.map(\.id))
             switch ProcessInfo.processInfo.environment["PREVIEW_TAB"] {
             case "profiles": router.selectedTab = .profiles
             case "mail": router.selectedTab = .mail

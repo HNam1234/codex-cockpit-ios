@@ -175,6 +175,13 @@ final class CockpitStore: ObservableObject {
         rebuildAccounts()
     }
 
+    func disconnectLocalOAuth(accountID: String) {
+        guard let index = localAccounts.firstIndex(where: { $0.id == accountID }) else { return }
+        localAccounts[index].connected = false
+        saveLocalAccounts()
+        rebuildAccounts()
+    }
+
     func deleteAccount(accountID: String) async -> Bool {
         busyAccounts.insert(accountID)
         defer { busyAccounts.remove(accountID) }
