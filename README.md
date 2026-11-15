@@ -23,6 +23,18 @@ SwiftUI app for iOS 17+ with a native quota dashboard and a dynamic number of pe
 - Launches directly into the dashboard; the unstable startup Face ID gate is disabled.
 - Face ID preference uses a namespaced key so re-signing with a reused bundle ID cannot inherit another app's lock state.
 - Only one profile WebView is alive while its screen is open.
+- A native Mail.tm tab creates free temporary inboxes and can map one active inbox to each Codex account and its dedicated WebKit.
+- Mailboxes use a 60-day local retention target by default (or 30 days), show remaining days and unread counts, and extract likely verification codes for explicit one-tap copy.
+
+## Temporary mail: behavior and limits
+
+Open **Mail / Thư**, tap `+`, choose 30 or 60 days, and optionally link the new address to an existing account. The same inbox then appears in that account's detail screen beside its mapped WebKit. Pull down on the Mail list or inbox to refresh. Messages are rendered only as inert plain text; remote HTML, images, scripts, trackers, and attachment downloads are not loaded. Attachment names, types, and sizes are metadata only.
+
+Mailbox passwords and tokens are stored in this device's Keychain with a `ThisDeviceOnly` accessibility class. Safe mailbox metadata and bounded plain-text messages are cached in Application Support for offline reading. Verification-code candidates are extracted locally and are copied only after the user taps one; the app never submits a code or automates account registration.
+
+The 30/60-day choice is an app-managed local target, not a Mail.tm uptime guarantee. Mail.tm may remove an inactive address earlier. The app checks expiry and retries provider deletion when it next enters the foreground; offline deletion remains pending without exposing credentials. If a provider mailbox disappears early, the app can create a replacement while preserving the suggested account mapping.
+
+This release has no push-mail guarantee, no outgoing mail, and no attachment download. New messages arrive when the app refreshes in the foreground or the user pulls to refresh. The free mail service is provided by [Mail.tm](https://mail.tm/); do not use a temporary inbox for important recovery email or long-term identity ownership.
 
 ## Generate and run
 

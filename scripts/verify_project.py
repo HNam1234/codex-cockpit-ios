@@ -83,6 +83,29 @@ assert "input.value === code" in device_code_source
 assert "button.click()" in device_code_source
 assert "DeviceCodeAssistant.submit" in (root / "CodexCockpit/Web/BrowserState.swift").read_text(encoding="utf-8")
 
+mail_client_source = (root / "CodexCockpit/Services/MailTMClient.swift").read_text(encoding="utf-8")
+assert 'URL(string: "https://api.mail.tm")!' in mail_client_source
+assert 'components.host?.lowercased() == "api.mail.tm"' in mail_client_source
+assert "http://api.mail.tm" not in mail_client_source
+
+mail_vault_source = (root / "CodexCockpit/Services/DisposableMailCredentialVault.swift").read_text(encoding="utf-8")
+assert "kSecAttrAccessibleWhenUnlockedThisDeviceOnly" in mail_vault_source
+
+mail_model_source = (root / "CodexCockpit/Models/DisposableMail.swift").read_text(encoding="utf-8")
+mail_cache_source = (root / "CodexCockpit/Services/DisposableMailPersistence.swift").read_text(encoding="utf-8")
+for forbidden_persisted_credential in ("password", "token"):
+    assert forbidden_persisted_credential not in mail_model_source.lower()
+    assert forbidden_persisted_credential not in mail_cache_source.lower()
+
+mail_view_source = (root / "CodexCockpit/Views/MailView.swift").read_text(encoding="utf-8")
+mailbox_view_source = (root / "CodexCockpit/Views/MailboxDetailView.swift").read_text(encoding="utf-8")
+message_view_source = (root / "CodexCockpit/Views/DisposableMessageView.swift").read_text(encoding="utf-8")
+assert ".refreshable" in mail_view_source
+assert ".refreshable" in mailbox_view_source
+for forbidden_renderer in ("WKWebView", "WebView", "NSAttributedString", "loadHTMLString"):
+    assert forbidden_renderer not in message_view_source, f"remote mail renderer found: {forbidden_renderer}"
+assert "VerificationCodeExtractor.codes" in message_view_source
+
 accounts_source = (root / "CodexCockpit/Views/AccountsView.swift").read_text(encoding="utf-8")
 assert "Thêm account + WebKit" in accounts_source
 assert "Code từ PC" in accounts_source
@@ -108,6 +131,12 @@ for key in (
     "quota.reset.hours_minutes",
     "subscription.days",
     "tibo.status.confirmed",
+    "mail.tab",
+    "mail.empty.title",
+    "mail.create.title",
+    "mail.lifetime.60",
+    "mail.code.copy",
+    "mail.provider.attribution",
 ):
     assert f'"{key}"' in english_strings, f"missing English localization: {key}"
     assert f'"{key}"' in vietnamese_strings, f"missing Vietnamese localization: {key}"
@@ -115,6 +144,17 @@ assert '"Nhập code từ PC" = "Enter code from PC";' in english_strings
 assert '"Tiếp tục tự động" = "Continue automatically";' in english_strings
 assert "developmentLanguage: vi" in (root / "project.yml").read_text(encoding="utf-8")
 assert "cockpit-device-code-en.png" in workflow_text
+for preview in (
+    "cockpit-mail.png",
+    "cockpit-mail-message.png",
+    "cockpit-mail-en.png",
+    "cockpit-mail-message-en.png",
+):
+    assert preview in workflow_text, f"missing Mail preview: {preview}"
+
+project_text = (root / "project.yml").read_text(encoding="utf-8")
+assert project_text.count('MARKETING_VERSION: "1.9.0"') == 1
+assert project_text.count('CURRENT_PROJECT_VERSION: "23"') == 1
 
 api_source = (root / "CodexCockpit/Services/CockpitAPI.swift").read_text(encoding="utf-8")
 assert "app-account/create" in api_source

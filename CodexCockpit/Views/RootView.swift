@@ -50,6 +50,21 @@ struct RootView: View {
                     .navigationDestination(for: UUID.self) { mailboxID in
                         MailboxDetailView(mailboxID: mailboxID)
                     }
+                    .navigationDestination(for: MailMessagePreviewRoute.self) { route in
+                        if let message = mailStore.messagesByMailbox[route.mailboxID]?.first(where: {
+                            $0.id == route.messageID
+                        }) {
+                            DisposableMessageView(
+                                mailboxID: route.mailboxID,
+                                initialMessage: message
+                            )
+                        } else {
+                            ContentUnavailableView(
+                                L10n.text("mail.unavailable"),
+                                systemImage: "envelope.badge.fill"
+                            )
+                        }
+                    }
             }
             .tabItem { Label(L10n.text("mail.tab"), systemImage: "envelope.fill") }
             .tag(AppTab.mail)
@@ -72,8 +87,15 @@ struct RootView: View {
             case "settings": router.selectedTab = .settings
             default: break
             }
-            if ProcessInfo.processInfo.environment["PREVIEW_MAIL_OPEN_INBOX"] == "1",
-               router.mailPath.isEmpty {
+            let environment = ProcessInfo.processInfo.environment
+            if environment["PREVIEW_MAIL_OPEN_MESSAGE"] == "1", router.mailPath.isEmpty {
+                router.selectedTab = .mail
+                let mailboxID = UUID(uuidString: "55555555-5555-4555-8555-555555555555")!
+                router.mailPath.append(mailboxID)
+                router.mailPath.append(
+                    MailMessagePreviewRoute(mailboxID: mailboxID, messageID: "preview-message")
+                )
+            } else if environment["PREVIEW_MAIL_OPEN_INBOX"] == "1", router.mailPath.isEmpty {
                 router.selectedTab = .mail
                 router.mailPath.append(UUID(uuidString: "55555555-5555-4555-8555-555555555555")!)
             }
@@ -161,4 +183,9 @@ struct RootView: View {
             )
         }
     }
+}
+
+private struct MailMessagePreviewRoute: Hashable {
+    let mailboxID: UUID
+    let messageID: String
 }
