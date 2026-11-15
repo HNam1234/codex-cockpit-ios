@@ -35,6 +35,22 @@ struct MailTMPage<Element: Decodable & Sendable>: Decodable, Sendable {
         case members = "hydra:member"
         case totalItems = "hydra:totalItems"
     }
+
+    init(from decoder: Decoder) throws {
+        if var container = try? decoder.unkeyedContainer() {
+            var values: [Element] = []
+            while !container.isAtEnd {
+                values.append(try container.decode(Element.self))
+            }
+            members = values
+            totalItems = values.count
+            return
+        }
+
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        members = try container.decode([Element].self, forKey: .members)
+        totalItems = try container.decodeIfPresent(Int.self, forKey: .totalItems) ?? members.count
+    }
 }
 
 enum DisposableMailServiceError: Error, Equatable, LocalizedError, Sendable {
