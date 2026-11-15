@@ -187,6 +187,8 @@
 "oauth.direct.syncingQuota" = "Verifying and syncing quota…";
 "oauth.direct.success.title" = "Connected with live quota";
 "oauth.direct.success.detail" = "The verified email is the account name. Quota now updates directly in the app.";
+"oauth.direct.success.local.title" = "Account connected";
+"oauth.direct.success.local.detail" = "The verified email is the account name. This legacy local account does not have VPS quota.";
 "oauth.direct.success.continue" = "Continue to ChatGPT";
 "accounts.add_with_webkit" = "Add account + WebKit";
 "accounts.creating" = "Creating quota slot…";

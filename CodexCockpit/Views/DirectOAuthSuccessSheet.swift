@@ -2,6 +2,7 @@ import SwiftUI
 
 struct DirectOAuthSuccessSheet: View {
     let registration: DirectOAuthRegistration
+    let showsLiveQuota: Bool
     let onContinue: () -> Void
 
     var body: some View {
@@ -17,14 +18,18 @@ struct DirectOAuthSuccessSheet: View {
                 }
 
                 VStack(spacing: 6) {
-                    Text(L10n.text("oauth.direct.success.title"))
+                    Text(L10n.text(showsLiveQuota
+                        ? "oauth.direct.success.title"
+                        : "oauth.direct.success.local.title"))
                         .font(.title3.weight(.bold))
                     Text(registration.email)
                         .font(.headline.monospaced())
                         .foregroundStyle(CockpitTheme.accent)
                         .lineLimit(1)
                         .minimumScaleFactor(0.72)
-                    Text(L10n.text("oauth.direct.success.detail"))
+                    Text(L10n.text(showsLiveQuota
+                        ? "oauth.direct.success.detail"
+                        : "oauth.direct.success.local.detail"))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)

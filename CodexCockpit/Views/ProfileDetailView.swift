@@ -346,6 +346,7 @@ struct AccountBrowserView: View {
     @State private var showingClear = false
     @State private var cockpitOAuthResult: CockpitOAuthCallback?
     @State private var directOAuthResult: DirectOAuthRegistration?
+    @State private var directOAuthHasLiveQuota = false
     @State private var isCompletingDirectOAuth = false
     @State private var webViewGeneration = UUID()
     @State private var didPrepareDirectOAuth = false
@@ -467,7 +468,10 @@ struct AccountBrowserView: View {
             .presentationDragIndicator(.visible)
         }
         .sheet(item: $directOAuthResult) { registration in
-            DirectOAuthSuccessSheet(registration: registration) {
+            DirectOAuthSuccessSheet(
+                registration: registration,
+                showsLiveQuota: directOAuthHasLiveQuota
+            ) {
                 directOAuthResult = nil
                 browser.clearDirectOAuth()
                 browser.open(AppURLs.chatGPT)
@@ -533,13 +537,21 @@ struct AccountBrowserView: View {
         do {
             let registration = try await directOAuth.complete(capture: capture, profileID: profile.id)
             if let identity = WebAccountIdentity(name: registration.name, email: registration.email) {
-                mappings.record(identity: identity, for: profile.id, accounts: store.accounts)
+                mappings.record(
+                    identity: identity,
+                    for: profile.id,
+                    mappedAccountID: accountID,
+                    accounts: store.accounts
+                )
             }
             if store.account(id: accountID)?.isLocalDirect == true {
                 store.completeLocalOAuth(accountID: accountID, email: registration.email)
+                directOAuthHasLiveQuota = false
             } else if await store.importDirectOAuth(accountID: accountID, registration: registration) == nil {
                 browser.errorMessage = "oauth.direct.error.quotaSync"
                 return
+            } else {
+                directOAuthHasLiveQuota = true
             }
             browser.errorMessage = nil
             directOAuthResult = registration

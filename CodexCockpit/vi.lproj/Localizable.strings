@@ -187,6 +187,8 @@
 "oauth.direct.syncingQuota" = "Đang xác minh và đồng bộ quota…";
 "oauth.direct.success.title" = "Đã kết nối và có quota";
 "oauth.direct.success.detail" = "Email đã xác minh là tên account. Quota sẽ tự cập nhật ngay trên app.";
+"oauth.direct.success.local.title" = "Đã kết nối tài khoản";
+"oauth.direct.success.local.detail" = "Email đã xác minh là tên account. Account cũ dạng local chưa có quota VPS.";
 "oauth.direct.success.continue" = "Tiếp tục vào ChatGPT";
 "accounts.add_with_webkit" = "Thêm account + WebKit";
 "accounts.creating" = "Đang tạo slot quota…";

@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 @MainActor
@@ -16,6 +17,7 @@ final class CockpitStore: ObservableObject {
     private let api: any CockpitAPIClient
     private let defaults: UserDefaults
     private let localAccountsKey = "CodexCockpit.localOAuthAccounts.v1"
+    private let importedOAuthKey = "CodexCockpit.importedOAuthFingerprints.v1"
     private var remoteAccounts: [AccountSnapshot] = []
     private var localAccounts: [LocalOAuthAccountRecord]
     private var loginTasks: [String: Task<Void, Never>] = [:]
@@ -39,12 +41,17 @@ final class CockpitStore: ObservableObject {
         accounts.first(where: { $0.id == id })
     }
 
-    func needsDirectOAuthRecovery(accountID: String) -> Bool {
+    func needsDirectOAuthRecovery(
+        accountID: String,
+        registration: DirectOAuthRegistration
+    ) -> Bool {
         guard !Self.isLocalAccountID(accountID),
               let account = remoteAccounts.first(where: { $0.id == accountID }) else {
             return false
         }
-        return !account.ok
+        guard !account.ok else { return false }
+        let imported = defaults.dictionary(forKey: importedOAuthKey) as? [String: String] ?? [:]
+        return imported[accountID] != Self.oauthFingerprint(registration)
     }
 
     func load() async {
@@ -202,6 +209,7 @@ final class CockpitStore: ObservableObject {
             )
             guard account.id == accountID else { throw CockpitAPIError.invalidResponse }
             replace(account)
+            markOAuthImported(accountID: accountID, registration: registration)
             errorMessage = nil
             return account
         } catch {
@@ -233,6 +241,9 @@ final class CockpitStore: ObservableObject {
             loginTasks.removeValue(forKey: accountID)
             loginSessions.removeValue(forKey: accountID)
             remoteAccounts.removeAll { $0.id == accountID }
+            var imported = defaults.dictionary(forKey: importedOAuthKey) as? [String: String] ?? [:]
+            imported.removeValue(forKey: accountID)
+            defaults.set(imported, forKey: importedOAuthKey)
             rebuildAccounts()
             errorMessage = nil
             return true
@@ -240,6 +251,28 @@ final class CockpitStore: ObservableObject {
             errorMessage = error.localizedDescription
             return false
         }
+    }
+
+    private func markOAuthImported(
+        accountID: String,
+        registration: DirectOAuthRegistration
+    ) {
+        var imported = defaults.dictionary(forKey: importedOAuthKey) as? [String: String] ?? [:]
+        imported[accountID] = Self.oauthFingerprint(registration)
+        defaults.set(imported, forKey: importedOAuthKey)
+    }
+
+    private static func oauthFingerprint(_ registration: DirectOAuthRegistration) -> String {
+        let material = [
+            registration.clientID,
+            registration.subject,
+            registration.idToken,
+            registration.accessToken,
+            registration.refreshToken ?? ""
+        ].joined(separator: "\u{1f}")
+        return SHA256.hash(data: Data(material.utf8))
+            .map { String(format: "%02x", $0) }
+            .joined()
     }
 
     func consumeResetCredit(accountID: String) async -> String? {

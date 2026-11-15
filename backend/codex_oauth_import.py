@@ -56,6 +56,14 @@ def _decode_jwt(value: str, label: str) -> dict[str, Any]:
     header = _decode_segment(parts[0], label)
     if header.get("alg") != "RS256" or not str(header.get("kid") or "").strip():
         raise OAuthImportError(f"{label} không hợp lệ")
+    if re.fullmatch(r"[A-Za-z0-9_-]+", parts[2]) is None:
+        raise OAuthImportError(f"{label} không hợp lệ")
+    try:
+        signature = base64.urlsafe_b64decode((parts[2] + "=" * (-len(parts[2]) % 4)).encode("ascii"))
+    except (UnicodeError, ValueError) as exc:
+        raise OAuthImportError(f"{label} không hợp lệ") from exc
+    if not signature:
+        raise OAuthImportError(f"{label} không hợp lệ")
     return _decode_segment(parts[1], label)
 
 
@@ -101,7 +109,7 @@ def build_auth_document(
         raise OAuthImportError("ID token issuer không hợp lệ")
     if not _single_audience(identity_claims.get("aud"), client_id):
         raise OAuthImportError("ID token client không khớp")
-    if access_claims.get("iss") not in (None, AUTH_ISSUER):
+    if access_claims.get("iss") != AUTH_ISSUER:
         raise OAuthImportError("Access token issuer không hợp lệ")
     if _non_empty(access_claims.get("client_id"), "Access token client", 256) != client_id:
         raise OAuthImportError("Access token client không khớp")
@@ -161,6 +169,8 @@ def install_and_verify(
     auth_path: Path,
     document: dict[str, Any],
     snapshot_reader: Callable[[], dict[str, Any]],
+    *,
+    commit: Callable[[dict[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
     """Install credentials and retain them only if Codex returns a healthy snapshot."""
 
@@ -174,8 +184,10 @@ def install_and_verify(
         snapshot = snapshot_reader()
         if not isinstance(snapshot, dict) or snapshot.get("ok") is not True:
             raise OAuthImportError("Codex không xác nhận được account vừa đăng nhập")
+        if commit is not None:
+            commit(snapshot)
         return snapshot
-    except Exception:
+    except Exception as exc:
         if previous is None:
             try:
                 auth_path.unlink()
@@ -183,7 +195,9 @@ def install_and_verify(
                 pass
         else:
             _atomic_write(auth_path, previous, previous_mode)
-        raise
+        if isinstance(exc, OAuthImportError):
+            raise
+        raise OAuthImportError("Codex không thể xác nhận quota vừa đăng nhập") from exc
 
 
 def import_oauth_credentials(
@@ -194,6 +208,7 @@ def import_oauth_credentials(
     access_token: str,
     refresh_token: str,
     snapshot_reader: Callable[[], dict[str, Any]],
+    commit: Callable[[dict[str, Any]], None] | None = None,
 ) -> tuple[dict[str, Any], ImportedIdentity]:
     """Validate, install, and live-check one completed OAuth login."""
 
@@ -203,4 +218,4 @@ def import_oauth_credentials(
         access_token,
         refresh_token,
     )
-    return install_and_verify(auth_path, document, snapshot_reader), identity
+    return install_and_verify(auth_path, document, snapshot_reader, commit=commit), identity

@@ -136,9 +136,13 @@ struct RootView: View {
 
     @MainActor
     private func recoverMappedOAuthQuota() async {
-        for account in store.accounts where store.needsDirectOAuthRecovery(accountID: account.id) {
+        for account in store.accounts {
             let profile = mappings.profile(for: account.id)
             guard let registration = directOAuth.registration(for: profile.id) else { continue }
+            guard store.needsDirectOAuthRecovery(
+                accountID: account.id,
+                registration: registration
+            ) else { continue }
             _ = await store.importDirectOAuth(accountID: account.id, registration: registration)
         }
     }

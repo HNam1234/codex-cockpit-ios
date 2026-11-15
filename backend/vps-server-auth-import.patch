@@ -1,28 +1,58 @@
---- server.py
-+++ server.py
-@@
- from urllib.parse import parse_qs, quote, urlparse
+diff --git a/server.py b/server.py
+--- a/server.py
++++ b/server.py
+@@ -27,0 +28,2 @@ from urllib.parse import parse_qs, quote, urlparse
 +from codex_oauth_import import import_oauth_credentials
-@@
-         self.cancelled_accounts: set[str] = set()
-+        self.account_locks: dict[str, threading.Lock] = {}
-@@
-     def refresh_account(self, account_id: str) -> dict[str, Any]:
-         config, account = self._config_and_account(account_id)
-         with self._client(config, account) as client:
-             raw = client.snapshot()
-         return safe_snapshot(account, self.watch.normalize_snapshot(account, raw))
 +
-+    def import_oauth(self, account_id, client_id, id_token, access_token, refresh_token):
-+        config, account = self._config_and_account(account_id)
-+        account_id = str(account["id"])
+@@ -431,0 +434 @@ class AppActionBridge:
++        self.account_locks: dict[str, threading.Lock] = {}
+@@ -454,0 +458,4 @@ class AppActionBridge:
++    def _account_lock(self, account_id: str) -> threading.Lock:
 +        with self.lock:
-+            account_lock = self.account_locks.setdefault(account_id, threading.Lock())
-+        with account_lock:
-+            def snapshot_reader():
++            return self.account_locks.setdefault(str(account_id), threading.Lock())
++
+@@ -501 +508 @@ class AppActionBridge:
+-        with self.lock:
++        with self._account_lock(account_id), self.lock:
+@@ -536,4 +543,44 @@ class AppActionBridge:
+-        config, account = self._config_and_account(account_id)
+-        with self._client(config, account) as client:
+-            raw = client.snapshot()
+-        return safe_snapshot(account, self.watch.normalize_snapshot(account, raw))
++        with self._account_lock(account_id):
++            config, account = self._config_and_account(account_id)
++            with self._client(config, account) as client:
++                raw = client.snapshot()
++            return safe_snapshot(account, self.watch.normalize_snapshot(account, raw))
++
++    def import_oauth(
++        self,
++        account_id: str,
++        client_id: str,
++        id_token: str,
++        access_token: str,
++        refresh_token: str,
++    ) -> dict[str, Any]:
++        account_id = str(account_id)
++        with self._account_lock(account_id):
++            config, account = self._config_and_account(account_id)
++
++            def snapshot_reader() -> dict[str, Any]:
 +                with self._client(config, account) as client:
 +                    raw = client.snapshot()
-+                return safe_snapshot(account, self.watch.normalize_snapshot(account, raw))
++                return self.watch.normalize_snapshot(account, raw)
++
++            def commit_snapshot(snapshot: dict[str, Any]) -> None:
++                state_path = Path(config.get("state_path") or "/var/lib/codex-usage-bot/state.json")
++                with self.lock:
++                    state = read_json(state_path, {"accounts": {}, "muted_until": 0})
++                    accounts = state.setdefault("accounts", {})
++                    if not isinstance(accounts, dict):
++                        accounts = {}
++                        state["accounts"] = accounts
++                    accounts[account_id] = snapshot
++                    save_json_atomic(state_path, state)
++
 +            snapshot, _ = import_oauth_credentials(
 +                auth_path=Path(str(account["codex_home"])) / "auth.json",
 +                client_id=client_id,
@@ -30,24 +60,45 @@
 +                access_token=access_token,
 +                refresh_token=refresh_token,
 +                snapshot_reader=snapshot_reader,
++                commit=commit_snapshot,
 +            )
-+            state_path = Path(config.get("state_path") or "/var/lib/codex-usage-bot/state.json")
-+            with self.lock:
-+                state = read_json(state_path, {"accounts": {}, "muted_until": 0})
-+                accounts = state.setdefault("accounts", {})
-+                if not isinstance(accounts, dict):
-+                    accounts = {}
-+                    state["accounts"] = accounts
-+                accounts[account_id] = snapshot
-+                save_json_atomic(state_path, state)
-+            return snapshot
-@@
++            return safe_snapshot(account, snapshot)
+@@ -544,8 +591,9 @@ class AppActionBridge:
+-        config, account = self._config_and_account(account_id)
+-        with self._client(config, account) as client:
+-            result = client.consume_reset_credit(idempotency_key, credit_id)
+-            raw = client.snapshot()
+-        return {
+-            "outcome": str((result or {}).get("outcome") or "unknown"),
+-            "account": safe_snapshot(account, self.watch.normalize_snapshot(account, raw)),
+-        }
++        with self._account_lock(account_id):
++            config, account = self._config_and_account(account_id)
++            with self._client(config, account) as client:
++                result = client.consume_reset_credit(idempotency_key, credit_id)
++                raw = client.snapshot()
++            return {
++                "outcome": str((result or {}).get("outcome") or "unknown"),
++                "account": safe_snapshot(account, self.watch.normalize_snapshot(account, raw)),
++            }
+@@ -578,0 +627,11 @@ class AppActionBridge:
++        account_id = str(account["id"])
++        with self._account_lock(account_id):
++            try:
++                config, account = self._config_and_account(account_id)
++            except ValueError:
++                return
++            self._login_worker_unlocked(session_id, config, account)
++
++    def _login_worker_unlocked(
++        self, session_id: str, config: dict[str, Any], account: dict[str, Any]
++    ) -> None:
+@@ -748 +807 @@ class DashboardHandler(BaseHTTPRequestHandler):
 -        if length <= 0 or length > 16 * 1024:
 +        if length <= 0 or length > 32 * 1024:
-@@
-             "/app-auth/status",
+@@ -817,0 +877 @@ class DashboardHandler(BaseHTTPRequestHandler):
 +            "/app-auth/import",
-@@
+@@ -871,0 +932,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
 +            if path == "/app-auth/import":
 +                account = self.app.bridge.import_oauth(
 +                    self.form_value(form, "account_id"),

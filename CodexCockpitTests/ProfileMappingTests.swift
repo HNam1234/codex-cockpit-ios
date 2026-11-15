@@ -63,6 +63,24 @@ final class ProfileMappingTests: XCTestCase {
         XCTAssertEqual(store.mappedAccountID(for: "2"), "1")
     }
 
+    func testExplicitOAuthRouteKeepsTheLaunchedAccountMappedToItsWebKit() {
+        let store = ProfileMappingStore(defaults: defaults)
+        let first = account(id: "1", name: "Codex 1", email: "first@example.com")
+        let second = account(id: "2", name: "Codex 2", email: "second@example.com")
+        store.synchronize(accounts: [first, second])
+
+        store.record(
+            identity: WebAccountIdentity(name: "Second", email: "second@example.com")!,
+            for: "1",
+            mappedAccountID: "1",
+            accounts: [first, second]
+        )
+
+        XCTAssertEqual(store.mappedAccountID(for: "1"), "1")
+        XCTAssertEqual(store.mappedAccountID(for: "2"), "2")
+        XCTAssertEqual(store.webIdentities["1"]?.email, "second@example.com")
+    }
+
     func testAmbiguousEmailDoesNotChangeMappings() {
         let store = ProfileMappingStore(defaults: defaults)
         let first = account(id: "1", name: "Codex 1", email: "same@example.com")

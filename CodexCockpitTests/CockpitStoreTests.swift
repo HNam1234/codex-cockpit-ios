@@ -67,10 +67,41 @@ final class CockpitStoreTests: XCTestCase {
         let store = CockpitStore(api: api)
         await store.load()
 
-        XCTAssertFalse(store.needsDirectOAuthRecovery(accountID: "1"))
-        XCTAssertTrue(store.needsDirectOAuthRecovery(accountID: "2"))
-        XCTAssertFalse(store.needsDirectOAuthRecovery(accountID: "local:legacy"))
-        XCTAssertFalse(store.needsDirectOAuthRecovery(accountID: "missing"))
+        let registration = directRegistration()
+        XCTAssertFalse(store.needsDirectOAuthRecovery(accountID: "1", registration: registration))
+        XCTAssertTrue(store.needsDirectOAuthRecovery(accountID: "2", registration: registration))
+        XCTAssertFalse(store.needsDirectOAuthRecovery(accountID: "local:legacy", registration: registration))
+        XCTAssertFalse(store.needsDirectOAuthRecovery(accountID: "missing", registration: registration))
+    }
+
+    func testSuccessfulOAuthImportIsNotReplayedAfterTheVPSSlotLaterBreaks() async throws {
+        let suiteName = "CockpitStoreTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let broken = AccountSnapshot(
+            id: "1",
+            name: "Codex 1",
+            displayName: nil,
+            email: nil,
+            plan: nil,
+            subscriptionExpiresAt: nil,
+            ok: false,
+            error: "Cần đăng nhập",
+            windows: [],
+            resetCredits: 0,
+            checkedAt: 100
+        )
+        let api = CockpitAPIStub(accounts: [broken])
+        let registration = directRegistration()
+        var store: CockpitStore? = CockpitStore(api: api, defaults: defaults)
+        await store?.load()
+
+        let imported = await store?.importDirectOAuth(accountID: "1", registration: registration)
+        XCTAssertNotNil(imported)
+        store = CockpitStore(api: api, defaults: defaults)
+        await store?.load()
+
+        XCTAssertFalse(store?.needsDirectOAuthRecovery(accountID: "1", registration: registration) ?? true)
     }
 
     func testRefreshAllRequestsEveryVisibleAccountAndReplacesQuotaSnapshots() async {
@@ -137,6 +168,23 @@ final class CockpitStoreTests: XCTestCase {
             )],
             resetCredits: 0,
             checkedAt: 100
+        )
+    }
+
+    private func directRegistration() -> DirectOAuthRegistration {
+        DirectOAuthRegistration(
+            profileID: "1",
+            clientID: "client_1234567890",
+            subject: "user-123",
+            email: "person@example.com",
+            name: "Person",
+            idToken: "header.payload.signature",
+            accessToken: "access.payload.signature",
+            refreshToken: "refresh-token-value",
+            tokenType: "Bearer",
+            scopes: ["openid", "offline_access"],
+            expiresAt: 2_000_000_000,
+            earliestRefreshAt: nil
         )
     }
 }

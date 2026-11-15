@@ -18,7 +18,8 @@ def jwt(payload: dict) -> str:
         raw = json.dumps(value, separators=(",", ":")).encode()
         return base64.urlsafe_b64encode(raw).decode().rstrip("=")
 
-    return f"{encode({'alg': 'RS256', 'kid': 'test-key'})}.{encode(payload)}.signature"
+    signature = base64.urlsafe_b64encode(b"test-signature").decode().rstrip("=")
+    return f"{encode({'alg': 'RS256', 'kid': 'test-key'})}.{encode(payload)}.{signature}"
 
 
 def token_pair(*, account_id: str = "acct-123", subject: str = "user-123", client_id: str = "client_1234567890"):
@@ -45,6 +46,29 @@ def token_pair(*, account_id: str = "acct-123", subject: str = "user-123", clien
 
 
 class OAuthImportTests(unittest.TestCase):
+    def test_rejects_non_base64url_signature(self):
+        client_id, identity, access = token_pair()
+        malformed = identity.rsplit(".", 1)[0] + ".!!!"
+
+        with self.assertRaisesRegex(OAuthImportError, "ID token"):
+            build_auth_document(client_id, malformed, access, "refresh-token-value")
+
+    def test_rejects_access_token_without_openai_issuer(self):
+        client_id, identity, _ = token_pair()
+        auth = {
+            "chatgpt_account_id": "acct-123",
+            "chatgpt_plan_type": "plus",
+            "chatgpt_user_id": "user-123",
+        }
+        access = jwt({
+            "client_id": client_id,
+            "sub": "user-123",
+            "https://api.openai.com/auth": auth,
+        })
+
+        with self.assertRaisesRegex(OAuthImportError, "issuer"):
+            build_auth_document(client_id, identity, access, "refresh-token-value")
+
     def test_high_level_import_returns_verified_snapshot_and_identity(self):
         client_id, identity, access = token_pair()
         with tempfile.TemporaryDirectory() as directory:
@@ -118,10 +142,33 @@ class OAuthImportTests(unittest.TestCase):
                 self.assertIn(b'"auth_mode": "chatgpt"', auth_path.read_bytes())
                 raise RuntimeError("Codex rejected imported credentials")
 
-            with self.assertRaisesRegex(RuntimeError, "Codex rejected"):
+            with self.assertRaisesRegex(OAuthImportError, "xác nhận quota") as raised:
                 install_and_verify(auth_path, document, reject)
 
             self.assertEqual(auth_path.read_bytes(), previous)
+            self.assertNotIn("rejected imported credentials", str(raised.exception))
+
+    def test_restores_previous_auth_when_snapshot_commit_fails(self):
+        client_id, identity, access = token_pair()
+        document, _ = build_auth_document(client_id, identity, access, "refresh-token-value")
+        with tempfile.TemporaryDirectory() as directory:
+            auth_path = Path(directory) / "auth.json"
+            previous = b'{"old":true}\n'
+            auth_path.write_bytes(previous)
+
+            def fail_commit(_snapshot):
+                raise OSError("state storage unavailable")
+
+            with self.assertRaisesRegex(OAuthImportError, "xác nhận quota") as raised:
+                install_and_verify(
+                    auth_path,
+                    document,
+                    lambda: {"ok": True, "windows": {"primary": {}}},
+                    commit=fail_commit,
+                )
+
+            self.assertEqual(auth_path.read_bytes(), previous)
+            self.assertNotIn("state storage", str(raised.exception))
 
     @unittest.skipIf(os.name == "nt", "POSIX permission assertion")
     def test_new_auth_file_is_private_and_verified_snapshot_is_returned(self):

@@ -489,9 +489,16 @@ final class ProfileMappingStore: ObservableObject {
         save()
     }
 
-    func record(identity: WebAccountIdentity, for profileID: String, accounts: [AccountSnapshot]) {
+    func record(
+        identity: WebAccountIdentity,
+        for profileID: String,
+        mappedAccountID: String? = nil,
+        accounts: [AccountSnapshot]
+    ) {
         webIdentities[profileID] = identity
-        if let accountID = uniqueAccountID(matching: identity, accounts: accounts) {
+        if let mappedAccountID {
+            assignMapping(accountID: mappedAccountID, to: profileID)
+        } else if let accountID = uniqueAccountID(matching: identity, accounts: accounts) {
             assignMapping(accountID: accountID, to: profileID)
         }
         save()
