@@ -9,6 +9,16 @@ final class DirectOAuthFlowTests: XCTestCase {
     private let nonce = "nonce-direct-123"
     private let verifier = String(repeating: "v", count: 64)
 
+    override func setUp() {
+        super.setUp()
+        DirectOAuthURLProtocolStub.reset()
+    }
+
+    override func tearDown() {
+        DirectOAuthURLProtocolStub.reset()
+        super.tearDown()
+    }
+
     func testNewRegistrationBuildsOfficialDynamicClientAuthorization() throws {
         let attempt = try DirectOAuthFlow.makeAttempt(
             hostID: hostID,
@@ -118,6 +128,48 @@ final class DirectOAuthFlowTests: XCTestCase {
         XCTAssertEqual(browser.capturedDirectOAuth?.callback.issuedClientID, "oaiapp_issued")
     }
 
+    func testTokenExchangeRepeatsOfficialResourceParameter() async throws {
+        let recorder = DirectOAuthRequestRecorder()
+        DirectOAuthURLProtocolStub.handler = { request in
+            recorder.append(request)
+            let response = try XCTUnwrap(HTTPURLResponse(
+                url: request.url!,
+                statusCode: 400,
+                httpVersion: nil,
+                headerFields: ["Content-Type": "application/json"]
+            ))
+            return (response, Data(#"{"error":"invalid_request"}"#.utf8))
+        }
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [DirectOAuthURLProtocolStub.self]
+        let client = DirectOAuthClient(session: URLSession(configuration: configuration))
+        let capture = DirectOAuthCapture(
+            attempt: try newAttempt(),
+            callback: DirectOAuthCallback(code: "auth-code", issuedClientID: "oaiapp_issued")
+        )
+
+        do {
+            _ = try await client.exchange(capture: capture, profileID: "3", previous: nil)
+            XCTFail("Expected the controlled token endpoint to reject the request")
+        } catch let error as DirectOAuthError {
+            XCTAssertEqual(error, .tokenExchangeFailed(400))
+        }
+
+        let request = try XCTUnwrap(recorder.requests.first)
+        let body = try XCTUnwrap(request.httpBody.flatMap { String(data: $0, encoding: .utf8) })
+        let items = URLComponents(string: "?\(body)")?.queryItems ?? []
+        let values = Dictionary(uniqueKeysWithValues: items.map { ($0.name, $0.value ?? "") })
+
+        XCTAssertEqual(request.url, DirectOAuthFlow.tokenEndpoint)
+        XCTAssertEqual(request.httpMethod, "POST")
+        XCTAssertEqual(values["grant_type"], "authorization_code")
+        XCTAssertEqual(values["client_id"], "oaiapp_issued")
+        XCTAssertEqual(values["code"], "auth-code")
+        XCTAssertEqual(values["redirect_uri"], "http://127.0.0.1:1455/auth/callback")
+        XCTAssertEqual(values["code_verifier"], verifier)
+        XCTAssertEqual(values["resource"], "https://api.openai.com/v1")
+    }
+
     func testVerifiedIdentityRequiresVerifiedEmailAndStableSubject() throws {
         let valid: [String: Any] = [
             "iss": "https://auth.openai.com",
@@ -175,5 +227,56 @@ final class DirectOAuthFlowTests: XCTestCase {
             expiresAt: 2_000_000_000,
             earliestRefreshAt: nil
         )
+    }
+}
+
+private final class DirectOAuthURLProtocolStub: URLProtocol, @unchecked Sendable {
+    static var handler: ((URLRequest) throws -> (HTTPURLResponse, Data))?
+
+    static func reset() {
+        handler = nil
+    }
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
+    override func startLoading() {
+        do {
+            let (response, data) = try XCTUnwrap(Self.handler)(request)
+            client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+            if !data.isEmpty { client?.urlProtocol(self, didLoad: data) }
+            client?.urlProtocolDidFinishLoading(self)
+        } catch {
+            client?.urlProtocol(self, didFailWithError: error)
+        }
+    }
+
+    override func stopLoading() {}
+}
+
+private final class DirectOAuthRequestRecorder: @unchecked Sendable {
+    private let lock = NSLock()
+    private var storage: [URLRequest] = []
+
+    var requests: [URLRequest] {
+        lock.withLock { storage }
+    }
+
+    func append(_ request: URLRequest) {
+        var snapshot = request
+        if snapshot.httpBody == nil, let stream = request.httpBodyStream {
+            stream.open()
+            defer { stream.close() }
+
+            var body = Data()
+            var buffer = [UInt8](repeating: 0, count: 4_096)
+            while stream.hasBytesAvailable {
+                let count = stream.read(&buffer, maxLength: buffer.count)
+                guard count > 0 else { break }
+                body.append(contentsOf: buffer.prefix(count))
+            }
+            snapshot.httpBody = body
+        }
+        lock.withLock { storage.append(snapshot) }
     }
 }
