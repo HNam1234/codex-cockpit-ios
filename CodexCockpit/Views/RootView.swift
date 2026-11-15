@@ -102,6 +102,7 @@ struct RootView: View {
         }
         .task(id: scenePhase) {
             guard ProcessInfo.processInfo.environment["UITEST_MODE"] == nil,
+                  ProcessInfo.processInfo.environment["PREVIEW_MAIL_SAMPLE"] == nil,
                   scenePhase == .active else { return }
             await store.load()
             mappings.synchronize(accounts: store.accounts)
@@ -120,7 +121,8 @@ struct RootView: View {
         }
         .onChange(of: store.accounts) { _, _ in
             mappings.synchronize(accounts: store.accounts)
-            guard ProcessInfo.processInfo.environment["UITEST_MODE"] == nil else { return }
+            guard ProcessInfo.processInfo.environment["UITEST_MODE"] == nil,
+                  ProcessInfo.processInfo.environment["PREVIEW_MAIL_SAMPLE"] == nil else { return }
             Task {
                 await mailStore.handleForeground(validAccountIDs: Set(store.accounts.map(\.id)))
             }
