@@ -64,7 +64,9 @@ final class MailTMClientTests: XCTestCase {
         let recorder = MailTMRequestRecorder()
         MailTMURLProtocolStub.handler = { request in
             recorder.append(request)
-            let path = request.url?.percentEncodedPath ?? ""
+            let path = request.url.flatMap {
+                URLComponents(url: $0, resolvingAgainstBaseURL: false)?.percentEncodedPath
+            } ?? ""
             switch (request.httpMethod, path) {
             case ("GET", "/messages"):
                 return Self.response(request, status: 200, json: Self.messageListJSON)
@@ -140,7 +142,7 @@ final class MailTMClientTests: XCTestCase {
         _ = try await client.availableDomains()
         _ = try await client.availableDomains()
 
-        XCTAssertEqual(await delays.values, [0.25], accuracy: 0.001)
+        assertTimeIntervalsEqual(await delays.values, [0.25], accuracy: 0.001)
     }
 
     func testHonorsRetryAfterForRateLimitedRead() async throws {
@@ -164,7 +166,7 @@ final class MailTMClientTests: XCTestCase {
 
         XCTAssertEqual(domains.count, 1)
         XCTAssertEqual(attempts.value, 2)
-        XCTAssertEqual(await delays.values, [2], accuracy: 0.001)
+        assertTimeIntervalsEqual(await delays.values, [2], accuracy: 0.001)
     }
 
     func testRetriesTransientServerReadsWithBoundedExponentialBackoff() async throws {
@@ -185,7 +187,7 @@ final class MailTMClientTests: XCTestCase {
         _ = try await client.availableDomains()
 
         XCTAssertEqual(attempts.value, 3)
-        XCTAssertEqual(await delays.values, [1, 2], accuracy: 0.001)
+        assertTimeIntervalsEqual(await delays.values, [1, 2], accuracy: 0.001)
     }
 
     private func makeClient(
@@ -299,7 +301,7 @@ private actor MailTMDelayRecorder {
 }
 
 private extension XCTestCase {
-    func XCTAssertEqual(
+    func assertTimeIntervalsEqual(
         _ actual: [TimeInterval],
         _ expected: [TimeInterval],
         accuracy: TimeInterval,
