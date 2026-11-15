@@ -26,8 +26,10 @@ from typing import Any
 from urllib.parse import parse_qs, quote, urlparse
 
 if __package__:
+    from .codex_app_server import CodexAppServer
     from .codex_oauth_import import import_oauth_credentials
 else:
+    from codex_app_server import CodexAppServer
     from codex_oauth_import import import_oauth_credentials
 
 try:
@@ -447,7 +449,7 @@ class AppActionBridge:
         return config, account
 
     def _client(self, config: dict[str, Any], account: dict[str, Any]) -> Any:
-        return self.watch.CodexAppServer(
+        return CodexAppServer(
             str(account["codex_home"]),
             str(config.get("codex_bin") or "codex"),
             int(config.get("codex_timeout_seconds") or 25),

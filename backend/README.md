@@ -4,5 +4,7 @@
 
 `server.py` is now the deployable dashboard server, including device-code login and immediate persistence of the resulting quota snapshot. The older `vps-server-auth-import.patch` records the initial import integration only. Device-code login remains the main app flow; WebKit sessions alone do not mark VPS quota as connected.
 
+`codex_app_server.py` owns the dashboard's stdio transport. It sends asynchronous login-completed notifications directly to the login waiter, including events received after the device-code RPC has already returned. Deploy it beside `server.py`; the Telegram watcher's separate transport is not modified.
+
 Deployment keeps a timestamped `/opt/codex-cockpit/server.py.bak-*` backup, installs both Python files as root-owned mode `0644`, compiles them, restarts `codex-cockpit.service`, checks `/codex/api/health`, and confirms existing account credential hashes are unchanged. `smoke_account_registry.py` verifies that the hardened service can create and recoverably delete a temporary account. OAuth values must never be printed while deploying or diagnosing this bridge.
 
