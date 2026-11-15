@@ -298,10 +298,11 @@ final class CockpitStore: ObservableObject {
 
     private func startPolling(accountID: String, sessionID: String) {
         loginTasks[accountID]?.cancel()
+        let interval = loginPollInterval
         loginTasks[accountID] = Task { [weak self] in
             while !Task.isCancelled {
                 do {
-                    try await Task.sleep(for: loginPollInterval)
+                    try await Task.sleep(for: interval)
                 } catch { return }
                 guard let self else { return }
                 do {
