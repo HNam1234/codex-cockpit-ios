@@ -89,12 +89,11 @@ private struct CredentialPayload: Codable {
     let token: String
 
     init(_ credential: MailTMCredential) {
-        self.init(
-            providerAccountID: credential.providerAccountID,
-            address: credential.address,
-            password: credential.password,
-            token: credential.token
-        )
+        providerAccountID = credential.providerAccountID
+        address = credential.address
+        password
+            = credential.password
+        token = credential.token
     }
 
     var credential: MailTMCredential {
