@@ -56,6 +56,12 @@ jobs:
           SIMCTL_CHILD_PREVIEW_TAB=settings xcrun simctl launch --terminate-running-process "$DEVICE_UDID" vn.nam.CodexCockpit -AppleLanguages '(vi)' -AppleLocale vi_VN
           sleep 3
           xcrun simctl io "$DEVICE_UDID" screenshot .build/preview/cockpit-settings.png
+          SIMCTL_CHILD_PREVIEW_TAB=mail SIMCTL_CHILD_PREVIEW_MAIL_SAMPLE=1 xcrun simctl launch --terminate-running-process "$DEVICE_UDID" vn.nam.CodexCockpit -AppleLanguages '(vi)' -AppleLocale vi_VN
+          sleep 3
+          xcrun simctl io "$DEVICE_UDID" screenshot .build/preview/cockpit-mail.png
+          SIMCTL_CHILD_PREVIEW_MAIL_SAMPLE=1 SIMCTL_CHILD_PREVIEW_MAIL_OPEN_INBOX=1 xcrun simctl launch --terminate-running-process "$DEVICE_UDID" vn.nam.CodexCockpit -AppleLanguages '(vi)' -AppleLocale vi_VN
+          sleep 3
+          xcrun simctl io "$DEVICE_UDID" screenshot .build/preview/cockpit-mail-inbox.png
           xcrun simctl launch --terminate-running-process "$DEVICE_UDID" vn.nam.CodexCockpit -AppleLanguages '(en)' -AppleLocale en_US
           sleep 5
           xcrun simctl io "$DEVICE_UDID" screenshot .build/preview/cockpit-home-en.png
@@ -74,6 +80,12 @@ jobs:
           SIMCTL_CHILD_PREVIEW_TAB=settings xcrun simctl launch --terminate-running-process "$DEVICE_UDID" vn.nam.CodexCockpit -AppleLanguages '(en)' -AppleLocale en_US
           sleep 3
           xcrun simctl io "$DEVICE_UDID" screenshot .build/preview/cockpit-settings-en.png
+          SIMCTL_CHILD_PREVIEW_TAB=mail SIMCTL_CHILD_PREVIEW_MAIL_SAMPLE=1 xcrun simctl launch --terminate-running-process "$DEVICE_UDID" vn.nam.CodexCockpit -AppleLanguages '(en)' -AppleLocale en_US
+          sleep 3
+          xcrun simctl io "$DEVICE_UDID" screenshot .build/preview/cockpit-mail-en.png
+          SIMCTL_CHILD_PREVIEW_MAIL_SAMPLE=1 SIMCTL_CHILD_PREVIEW_MAIL_OPEN_INBOX=1 xcrun simctl launch --terminate-running-process "$DEVICE_UDID" vn.nam.CodexCockpit -AppleLanguages '(en)' -AppleLocale en_US
+          sleep 3
+          xcrun simctl io "$DEVICE_UDID" screenshot .build/preview/cockpit-mail-inbox-en.png
       - name: Build device app without signing
         run: |
           xcodebuild \

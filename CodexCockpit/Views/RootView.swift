@@ -13,10 +13,10 @@ struct RootView: View {
     init() {
         let environment = ProcessInfo.processInfo.environment
         let previewSnapshot: DisposableMailSnapshot?
-        if environment["UITEST_MODE"] != nil {
-            previewSnapshot = environment["PREVIEW_MAIL_SAMPLE"] == "1"
-                ? Self.previewMailSnapshot()
-                : .empty
+        if environment["PREVIEW_MAIL_SAMPLE"] == "1" {
+            previewSnapshot = Self.previewMailSnapshot()
+        } else if environment["UITEST_MODE"] != nil {
+            previewSnapshot = .empty
         } else {
             previewSnapshot = nil
         }
@@ -71,6 +71,11 @@ struct RootView: View {
             case "mail": router.selectedTab = .mail
             case "settings": router.selectedTab = .settings
             default: break
+            }
+            if ProcessInfo.processInfo.environment["PREVIEW_MAIL_OPEN_INBOX"] == "1",
+               router.mailPath.isEmpty {
+                router.selectedTab = .mail
+                router.mailPath.append(UUID(uuidString: "55555555-5555-4555-8555-555555555555")!)
             }
         }
         .task(id: scenePhase) {
