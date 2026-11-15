@@ -42,6 +42,7 @@ enum DisposableMailServiceError: Error, Equatable, LocalizedError, Sendable {
     case unavailable
     case unauthorized
     case missing
+    case conflict
     case rateLimited(retryAt: Date)
     case malformedResponse
     case rejectedHost
@@ -53,6 +54,7 @@ enum DisposableMailServiceError: Error, Equatable, LocalizedError, Sendable {
         case .unavailable: "Disposable mail is temporarily unavailable."
         case .unauthorized: "Disposable mailbox authorization failed."
         case .missing: "Disposable mailbox no longer exists."
+        case .conflict: "Disposable mailbox address is already in use."
         case .rateLimited: "Disposable mail is rate limited."
         case .malformedResponse: "Disposable mail returned an invalid response."
         case .rejectedHost: "Disposable mail rejected an unexpected host."
@@ -272,6 +274,9 @@ actor MailTMClient: DisposableMailServing {
             if expectedStatus.contains(response.statusCode) { return data }
             if response.statusCode == 401 { throw DisposableMailServiceError.unauthorized }
             if response.statusCode == 404 { throw DisposableMailServiceError.missing }
+            if response.statusCode == 409 || response.statusCode == 422 {
+                throw DisposableMailServiceError.conflict
+            }
 
             if response.statusCode == 429 {
                 let retryAfter = response.value(forHTTPHeaderField: "Retry-After").flatMap(TimeInterval.init)

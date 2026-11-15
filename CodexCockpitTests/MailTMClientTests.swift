@@ -127,6 +127,26 @@ final class MailTMClientTests: XCTestCase {
         XCTAssertFalse(MailTMRedirectGuard.isAllowed(URL(string: "http://api.mail.tm/messages")!))
     }
 
+    func testMapsAccountConflictWithoutRetryingNonIdempotentCreate() async {
+        let counter = MailTMCounter()
+        MailTMURLProtocolStub.handler = { request in
+            _ = counter.increment()
+            return Self.response(request, status: 422, json: #"{"detail":"already used"}"#)
+        }
+        let client = makeClient()
+
+        do {
+            _ = try await client.createAccount(
+                address: "candidate@example.test",
+                password: "secret-password"
+            )
+            XCTFail("Expected conflict")
+        } catch {
+            XCTAssertEqual(error as? DisposableMailServiceError, .conflict)
+        }
+        XCTAssertEqual(counter.value, 1)
+    }
+
     func testSerializesRequestsToFourPerSecond() async throws {
         let delays = MailTMDelayRecorder()
         MailTMURLProtocolStub.handler = { request in
