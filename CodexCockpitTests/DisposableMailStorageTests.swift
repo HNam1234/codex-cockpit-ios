@@ -115,7 +115,8 @@ final class DisposableMailStorageTests: XCTestCase {
             let content = request.content
             return !content.title.contains(mailbox.address) &&
                 !content.body.contains(mailbox.address) &&
-                !content.body.localizedCaseInsensitiveContains("code") &&
+                !content.body.contains("482731") &&
+                !content.body.localizedCaseInsensitiveContains("verification code") &&
                 content.userInfo.isEmpty
         })
 
