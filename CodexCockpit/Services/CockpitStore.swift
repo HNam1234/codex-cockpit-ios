@@ -21,13 +21,16 @@ final class CockpitStore: ObservableObject {
     private var remoteAccounts: [AccountSnapshot] = []
     private var localAccounts: [LocalOAuthAccountRecord]
     private var loginTasks: [String: Task<Void, Never>] = [:]
+    private let loginPollInterval: Duration
 
     init(
         api: any CockpitAPIClient = CockpitAPI.shared,
-        defaults: UserDefaults = .standard
+        defaults: UserDefaults = .standard,
+        loginPollInterval: Duration = .seconds(2)
     ) {
         self.api = api
         self.defaults = defaults
+        self.loginPollInterval = loginPollInterval
         if let data = defaults.data(forKey: localAccountsKey),
            let decoded = try? JSONDecoder().decode([LocalOAuthAccountRecord].self, from: data) {
             localAccounts = decoded
@@ -143,6 +146,7 @@ final class CockpitStore: ObservableObject {
         defer { busyAccounts.remove(accountID) }
         do {
             let session = try await api.startAuthorization(accountID: accountID)
+            guard session.accountID == accountID else { throw CockpitAPIError.invalidResponse }
             loginSessions[accountID] = session
             errorMessage = nil
             startPolling(accountID: accountID, sessionID: session.sessionID)
@@ -296,10 +300,14 @@ final class CockpitStore: ObservableObject {
         loginTasks[accountID]?.cancel()
         loginTasks[accountID] = Task { [weak self] in
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(2))
+                do {
+                    try await Task.sleep(for: loginPollInterval)
+                } catch { return }
                 guard let self else { return }
                 do {
                     let session = try await self.api.authorizationStatus(sessionID: sessionID)
+                    guard !Task.isCancelled,
+                          session.accountID == accountID else { return }
                     self.loginSessions[accountID] = session
                     if session.status == "succeeded" {
                         if let account = session.account { self.replace(account) }

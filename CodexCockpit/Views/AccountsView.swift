@@ -152,10 +152,7 @@ struct AccountsView: View {
     private func accountCard(_ account: AccountSnapshot) -> some View {
         let profile = mappings.profile(for: account.id)
         let busy = store.busyAccounts.contains(account.id)
-        let hasDirectOAuthRegistration = directOAuth.hasRegistration(for: profile.id)
-        let health = account.health(
-            hasDirectOAuthRegistration: hasDirectOAuthRegistration
-        )
+        let health = account.health()
         return VStack(spacing: 11) {
             Button { router.profilePath.append(AppRoute.accountDetail(account.id)) } label: {
                 HStack(spacing: 12) {
@@ -179,12 +176,10 @@ struct AccountsView: View {
                     Spacer(minLength: 4)
                     if busy {
                         ProgressView().controlSize(.small)
-                    } else if account.isAuthenticated(
-                        hasDirectOAuthRegistration: hasDirectOAuthRegistration
-                    ), !account.windows.isEmpty {
+                    } else if account.isAuthenticated(), !account.windows.isEmpty {
                         AccountQuotaSnapshot(windows: Array(account.windows.prefix(2)))
                             .frame(width: 105)
-                    } else if hasDirectOAuthRegistration || (account.ok && account.isLocalDirect) {
+                    } else if account.ok && account.isLocalDirect {
                         Label(
                             L10n.text("oauth.direct.connected.compact"),
                             systemImage: "checkmark.shield.fill"
@@ -211,8 +206,8 @@ struct AccountsView: View {
                 .buttonStyle(CompactAccountActionStyle(tint: .blue))
                 .accessibilityLabel(L10n.text("oauth.relay.action.web"))
 
-                Button { startDirectOAuth(for: account) } label: {
-                    Label("OAuth", systemImage: "link")
+                Button { startQuotaLogin(for: account) } label: {
+                    Label(L10n.text("quota.login.compact"), systemImage: "person.badge.key.fill")
                 }
                 .buttonStyle(CompactAccountActionStyle(tint: CockpitTheme.accent))
                 .disabled(busy)
@@ -253,7 +248,7 @@ struct AccountsView: View {
         Task {
             guard let account = await store.createAccount(name: "") else { return }
             mappings.createDedicatedProfile(for: account.id)
-            startDirectOAuth(for: account)
+            startQuotaLogin(for: account)
         }
     }
 
@@ -272,13 +267,24 @@ struct AccountsView: View {
         try? await ProfileDataStore.clear(identifier: profile.dataStoreIdentifier)
     }
 
-    private func startDirectOAuth(for account: AccountSnapshot) {
-        let profile = mappings.createDedicatedProfile(for: account.id)
-        do {
-            let attempt = try directOAuth.prepare(profileID: profile.id)
-            router.openBrowser(accountID: account.id, launch: .directOAuth(attempt))
-        } catch {
-            store.errorMessage = error.localizedDescription
+    private func startQuotaLogin(for account: AccountSnapshot) {
+        mappings.createDedicatedProfile(for: account.id)
+        Task {
+            guard let session = await store.beginReauthorization(accountID: account.id) else { return }
+            guard session.status != "failed",
+                  let code = session.userCode,
+                  !DeviceCodeAssistant.normalized(code).isEmpty else {
+                store.errorMessage = session.error ?? L10n.text("quota.login.error.no_code")
+                return
+            }
+            router.openBrowser(
+                accountID: account.id,
+                launch: BrowserLaunch(
+                    mode: .device,
+                    code: code,
+                    verificationURL: session.verificationURL
+                )
+            )
         }
     }
 

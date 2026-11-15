@@ -6,30 +6,19 @@ struct AccountDetailView: View {
     @EnvironmentObject private var store: CockpitStore
     @EnvironmentObject private var mappings: ProfileMappingStore
     @EnvironmentObject private var router: AppRouter
-    @EnvironmentObject private var directOAuth: DirectOAuthStore
     @EnvironmentObject private var mailStore: DisposableMailStore
     @State private var confirmingReset = false
     @State private var resetMessage: String?
     @State private var showingDeviceAuthorization = false
-    @State private var showingCockpitOAuth = false
 
     var body: some View {
         ZStack {
             CockpitBackdrop()
             if let account = store.account(id: accountID) {
-                let hasDirectOAuthRegistration = directOAuth.hasRegistration(
-                    for: mappings.profile(for: account.id).id
-                )
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 22) {
-                        accountHero(
-                            account,
-                            hasDirectOAuthRegistration: hasDirectOAuthRegistration
-                        )
-                        quotaCard(
-                            account,
-                            hasDirectOAuthRegistration: hasDirectOAuthRegistration
-                        )
+                        accountHero(account)
+                        quotaCard(account)
                         webKitCard
                         temporaryMailCard(account)
                         actionGrid(account)
@@ -82,26 +71,9 @@ struct AccountDetailView: View {
                 .presentationDragIndicator(.visible)
             }
         }
-        .sheet(isPresented: $showingCockpitOAuth) {
-            if let account = store.account(id: accountID) {
-                let profile = mappings.profile(for: accountID)
-                CockpitOAuthEntrySheet(
-                    accountName: profile.name,
-                    identity: mappings.webIdentities[profile.id]?.label ?? mappings.displayIdentity(for: account)
-                ) { attempt in
-                    showingCockpitOAuth = false
-                    router.openBrowser(accountID: accountID, launch: .cockpitOAuth(attempt))
-                }
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
-            }
-        }
     }
 
-    private func accountHero(
-        _ account: AccountSnapshot,
-        hasDirectOAuthRegistration: Bool
-    ) -> some View {
+    private func accountHero(_ account: AccountSnapshot) -> some View {
         VStack(spacing: 13) {
             ProfileArtwork(seed: account.id, symbol: "command", size: 118)
             VStack(spacing: 4) {
@@ -111,9 +83,7 @@ struct AccountDetailView: View {
                       : [account.name, account.plan?.uppercased()])
                     .compactMap { $0 }.joined(separator: " · "))
                     .font(.subheadline.weight(.medium)).foregroundStyle(.secondary)
-                AccountHealthBadge(health: account.health(
-                    hasDirectOAuthRegistration: hasDirectOAuthRegistration
-                ))
+                AccountHealthBadge(health: account.health())
                 if let remaining = account.subscriptionRemainingText() {
                     HStack(spacing: 6) {
                         Label(remaining, systemImage: "calendar.badge.clock")
@@ -131,44 +101,28 @@ struct AccountDetailView: View {
                 }
             }
             if let error = account.error,
-               !account.isAuthenticated(
-                hasDirectOAuthRegistration: hasDirectOAuthRegistration
-               ) {
+               !account.isAuthenticated() {
                 Label(error, systemImage: "exclamationmark.triangle.fill").font(.caption).foregroundStyle(.red)
             }
         }
         .frame(maxWidth: .infinity).padding(.top, 10)
     }
 
-    private func quotaCard(
-        _ account: AccountSnapshot,
-        hasDirectOAuthRegistration: Bool
-    ) -> some View {
+    private func quotaCard(_ account: AccountSnapshot) -> some View {
         VStack(alignment: .leading, spacing: 18) {
             SectionHeading(title: "Quota", caption: "Còn lại")
             if account.windows.isEmpty {
-                if hasDirectOAuthRegistration {
-                    Label(
-                        L10n.text("quota.direct.connected_no_numeric"),
-                        systemImage: "checkmark.shield.fill"
-                    )
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    Link(destination: AppURLs.chatGPTUsage) {
-                        Label(
-                            L10n.text("quota.manage_usage"),
-                            systemImage: "arrow.up.right.square"
-                        )
-                        .font(.subheadline.weight(.bold))
-                    }
-                } else {
-                    Label(
-                        L10n.text("quota.unavailable.sign_in"),
-                        systemImage: "gauge.with.dots.needle.33percent"
-                    )
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                Label(
+                    L10n.text("quota.unavailable.sign_in"),
+                    systemImage: "gauge.with.dots.needle.33percent"
+                )
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                Button { startQuotaLogin() } label: {
+                    Label(L10n.text("quota.login.action"), systemImage: "person.badge.key.fill")
                 }
+                .buttonStyle(CapsuleActionStyle(tint: CockpitTheme.accent))
+                .disabled(store.busyAccounts.contains(accountID))
             } else {
                 ForEach(account.windows) { window in QuotaProgressRow(window: window) }
             }
@@ -249,14 +203,11 @@ struct AccountDetailView: View {
                 actionTile("Cập nhật", icon: "arrow.clockwise", tint: .blue) {
                     Task { await store.refresh(accountID: accountID) }
                 }
-                actionTile("OAuth trực tiếp", icon: "person.badge.key.fill", tint: CockpitTheme.accent) {
-                    startDirectOAuth()
+                actionTile(L10n.text("quota.login.action"), icon: "person.badge.key.fill", tint: CockpitTheme.accent) {
+                    startQuotaLogin()
                 }
                 actionTile("Nhập code PC", icon: "key.horizontal.fill", tint: CockpitTheme.violet) {
                     showingDeviceAuthorization = true
-                }
-                actionTile("OAuth Cockpit dự phòng", icon: "link", tint: .orange) {
-                    showingCockpitOAuth = true
                 }
                 if account.resetCredits > 0, store.capabilities?.resetCredit == true {
                     actionTile(
@@ -284,13 +235,24 @@ struct AccountDetailView: View {
         .disabled(store.busyAccounts.contains(accountID))
     }
 
-    private func startDirectOAuth() {
-        let profile = mappings.createDedicatedProfile(for: accountID)
-        do {
-            let attempt = try directOAuth.prepare(profileID: profile.id)
-            router.openBrowser(accountID: accountID, launch: .directOAuth(attempt))
-        } catch {
-            store.errorMessage = error.localizedDescription
+    private func startQuotaLogin() {
+        mappings.createDedicatedProfile(for: accountID)
+        Task {
+            guard let session = await store.beginReauthorization(accountID: accountID) else { return }
+            guard session.status != "failed",
+                  let code = session.userCode,
+                  !DeviceCodeAssistant.normalized(code).isEmpty else {
+                store.errorMessage = session.error ?? L10n.text("quota.login.error.no_code")
+                return
+            }
+            router.openBrowser(
+                accountID: accountID,
+                launch: BrowserLaunch(
+                    mode: .device,
+                    code: code,
+                    verificationURL: session.verificationURL
+                )
+            )
         }
     }
 
@@ -370,6 +332,20 @@ struct AccountBrowserView: View {
             if let code = browser.deviceCode {
                 deviceCodeBar(code)
             }
+            if launch.mode == .device,
+               let session = store.loginSessions[accountID] {
+                if session.status == "succeeded" {
+                    Label(L10n.text("quota.login.completed"), systemImage: "checkmark.circle.fill")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.green)
+                        .padding(10)
+                } else if let error = session.error {
+                    Text(error).font(.caption).foregroundStyle(.red).padding(10)
+                } else {
+                    Label(L10n.text("quota.login.waiting"), systemImage: "arrow.triangle.2.circlepath")
+                        .font(.caption).foregroundStyle(.secondary).padding(10)
+                }
+            }
             if isCompletingDirectOAuth {
                 Label(L10n.text("oauth.direct.syncingQuota"), systemImage: "arrow.triangle.2.circlepath.circle.fill")
                     .font(.caption.weight(.semibold))
@@ -409,8 +385,6 @@ struct AccountBrowserView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button("ChatGPT") { browser.open(AppURLs.chatGPT) }
-                    Button("OAuth trực tiếp") { startDirectOAuth() }
-                    Button("OAuth Cockpit dự phòng") { showingCockpitOAuth = true }
                     Button("Nhập device code") { showingCodeEntry = true }
                     Button("Xóa session", role: .destructive) { showingClear = true }
                 } label: { Image(systemName: "ellipsis.circle") }
@@ -515,18 +489,6 @@ struct AccountBrowserView: View {
         }
         browser.clearCockpitOAuth()
         cockpitOAuthResult = nil
-    }
-
-    private func startDirectOAuth() {
-        do {
-            let attempt = try directOAuth.prepare(profileID: profile.id)
-            didPrepareDirectOAuth = true
-            browser.prepareDirectOAuth(attempt)
-        } catch let error as DirectOAuthError {
-            browser.errorMessage = error.localizationKey
-        } catch {
-            store.errorMessage = error.localizedDescription
-        }
     }
 
     @MainActor

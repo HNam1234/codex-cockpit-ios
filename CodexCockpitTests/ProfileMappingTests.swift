@@ -47,7 +47,7 @@ final class ProfileMappingTests: XCTestCase {
         XCTAssertNil(WebAccountIdentity(javaScriptValue: ["name": " ", "email": "\n"]))
     }
 
-    func testUniqueCaseInsensitiveEmailMatchSwapsExistingMappings() {
+    func testDetectedEmailNeverSwapsExistingAccountWebKitMappings() {
         let store = ProfileMappingStore(defaults: defaults)
         let first = account(id: "1", name: "Codex 1", email: "first@example.com")
         let second = account(id: "2", name: "Codex 2", email: "SECOND@example.com")
@@ -59,8 +59,8 @@ final class ProfileMappingTests: XCTestCase {
             accounts: [first, second]
         )
 
-        XCTAssertEqual(store.mappedAccountID(for: "1"), "2")
-        XCTAssertEqual(store.mappedAccountID(for: "2"), "1")
+        XCTAssertEqual(store.mappedAccountID(for: "1"), "1")
+        XCTAssertEqual(store.mappedAccountID(for: "2"), "2")
     }
 
     func testExplicitOAuthRouteKeepsTheLaunchedAccountMappedToItsWebKit() {
@@ -108,6 +108,19 @@ final class ProfileMappingTests: XCTestCase {
         )
 
         XCTAssertEqual(store.displayIdentity(for: unavailable), "web@example.com")
+    }
+
+    func testVerifiedVPSQuotaEmailOverridesStaleWebKitIdentity() {
+        let store = ProfileMappingStore(defaults: defaults)
+        let connected = account(id: "1", name: "Codex 1", email: "quota@example.com")
+        store.synchronize(accounts: [connected])
+        store.record(
+            identity: WebAccountIdentity(name: "Stale", email: "stale@example.com")!,
+            for: "1",
+            accounts: [connected]
+        )
+
+        XCTAssertEqual(store.displayIdentity(for: connected), "quota@example.com")
     }
 
     func testWebIdentityPersistsPerProfile() {

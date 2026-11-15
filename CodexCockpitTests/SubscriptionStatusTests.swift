@@ -79,7 +79,7 @@ final class SubscriptionStatusTests: XCTestCase {
         XCTAssertEqual(account(expiresAt: 2_000_000, remaining: 80).health(at: now), .healthy)
     }
 
-    func testDirectOAuthRegistrationMakesExistingDashboardSlotConnected() {
+    func testDirectOAuthRegistrationCannotPretendRemoteQuotaIsConnected() {
         let now = Date(timeIntervalSince1970: 1_000_000)
         let disconnected = AccountSnapshot(
             id: "1",
@@ -96,10 +96,10 @@ final class SubscriptionStatusTests: XCTestCase {
         )
 
         XCTAssertEqual(disconnected.health(at: now), .needsLogin)
-        XCTAssertTrue(disconnected.isAuthenticated(hasDirectOAuthRegistration: true))
+        XCTAssertFalse(disconnected.isAuthenticated(hasDirectOAuthRegistration: true))
         XCTAssertEqual(
             disconnected.health(at: now, hasDirectOAuthRegistration: true),
-            .healthy
+            .needsLogin
         )
     }
 

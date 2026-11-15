@@ -74,6 +74,11 @@
 "account.not_signed_in" = "NOT SIGNED IN";
 "reset.credit_count" = "Reset credit · %d";
 "authorization.completed" = "Completed";
+"quota.login.action" = "Sign in for quota";
+"quota.login.compact" = "Quota";
+"quota.login.completed" = "Quota synced. Return to Overview to view it.";
+"quota.login.waiting" = "Waiting for sign-in approval to sync quota…";
+"quota.login.error.no_code" = "The VPS did not return a device code. Please try again.";
 "browser.clear_confirmation" = "Clear cookies and session for %@?";
 "device_code.accessibility" = "Device code %@";
 "settings.version_subtitle" = "%@ · Premium quota control";

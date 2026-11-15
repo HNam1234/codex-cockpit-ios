@@ -122,6 +122,61 @@ final class CockpitStoreTests: XCTestCase {
         XCTAssertNil(store.errorMessage)
     }
 
+    func testVPSDeviceAuthorizationReturnsCodeThenPublishesQuotaSnapshot() async throws {
+        let broken = AccountSnapshot(
+            id: "3",
+            name: "Codex 3",
+            displayName: nil,
+            email: nil,
+            plan: nil,
+            subscriptionExpiresAt: nil,
+            ok: false,
+            error: "Cần đăng nhập",
+            windows: [],
+            resetCredits: 0,
+            checkedAt: 100
+        )
+        let connected = account(id: "3", displayName: "Device User", remaining: 73)
+        let waiting = LoginSession(
+            sessionID: "session-3",
+            accountID: "3",
+            status: "waiting",
+            verificationURL: "https://auth.openai.com/codex/device",
+            userCode: "ABCD-EFGH",
+            expiresAt: 2_000_000_000,
+            error: nil,
+            account: nil
+        )
+        let succeeded = LoginSession(
+            sessionID: "session-3",
+            accountID: "3",
+            status: "succeeded",
+            verificationURL: nil,
+            userCode: nil,
+            expiresAt: 2_000_000_000,
+            error: nil,
+            account: connected
+        )
+        let api = CockpitAPIStub(
+            accounts: [broken],
+            authorizationStart: waiting,
+            authorizationStatuses: [succeeded]
+        )
+        let store = CockpitStore(api: api, loginPollInterval: .milliseconds(1))
+        await store.load()
+
+        let session = await store.beginReauthorization(accountID: "3")
+        try await Task.sleep(for: .milliseconds(50))
+
+        XCTAssertEqual(session?.userCode, "ABCD-EFGH")
+        let startedIDs = await api.startedAuthorizationIDs()
+        XCTAssertEqual(startedIDs, ["3"])
+        XCTAssertEqual(store.account(id: "3")?.email, "user3@example.com")
+        XCTAssertEqual(store.account(id: "3")?.windows.first?.remainingPercent, 73)
+        XCTAssertEqual(store.loginSessions["3"]?.status, "succeeded")
+        XCTAssertNil(store.errorMessage)
+    }
+
     func testLocalAccountUsesVerifiedEmailAndDoesNotCallServerRefresh() async throws {
         let suiteName = "CockpitStoreTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
@@ -191,15 +246,25 @@ final class CockpitStoreTests: XCTestCase {
 
 private actor CockpitAPIStub: CockpitAPIClient {
     private let initialAccounts: [AccountSnapshot]
+    private let authorizationStart: LoginSession?
+    private var authorizationStatuses: [LoginSession]
     private var requestedIDs: [String] = []
+    private var startedAuthorizationAccountIDs: [String] = []
     private var importedRequest: (accountID: String, profileID: String)?
 
-    init(accounts: [AccountSnapshot]) {
+    init(
+        accounts: [AccountSnapshot],
+        authorizationStart: LoginSession? = nil,
+        authorizationStatuses: [LoginSession] = []
+    ) {
         initialAccounts = accounts
+        self.authorizationStart = authorizationStart
+        self.authorizationStatuses = authorizationStatuses
     }
 
     func requestedAccountIDs() -> [String] { requestedIDs }
     func importRequest() -> (accountID: String, profileID: String)? { importedRequest }
+    func startedAuthorizationIDs() -> [String] { startedAuthorizationAccountIDs }
 
     func status() async throws -> NativeStatusResponse {
         NativeStatusResponse(
@@ -243,11 +308,14 @@ private actor CockpitAPIStub: CockpitAPIClient {
     }
 
     func startAuthorization(accountID: String) async throws -> LoginSession {
-        throw StubError.unused
+        startedAuthorizationAccountIDs.append(accountID)
+        guard let authorizationStart else { throw StubError.unused }
+        return authorizationStart
     }
 
     func authorizationStatus(sessionID: String) async throws -> LoginSession {
-        throw StubError.unused
+        guard !authorizationStatuses.isEmpty else { throw StubError.unused }
+        return authorizationStatuses.removeFirst()
     }
 
     func importDirectOAuth(

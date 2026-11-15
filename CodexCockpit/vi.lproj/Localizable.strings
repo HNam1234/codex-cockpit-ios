@@ -74,6 +74,11 @@
 "account.not_signed_in" = "CHƯA ĐĂNG NHẬP";
 "reset.credit_count" = "Reset credit · %d";
 "authorization.completed" = "Hoàn tất";
+"quota.login.action" = "Đăng nhập quota";
+"quota.login.compact" = "Quota";
+"quota.login.completed" = "Đã đồng bộ quota. Quay lại Tổng quan để xem.";
+"quota.login.waiting" = "Đang chờ xác nhận đăng nhập để đồng bộ quota…";
+"quota.login.error.no_code" = "VPS không trả về device code. Hãy thử lại.";
 "browser.clear_confirmation" = "Xóa cookie và session của %@?";
 "device_code.accessibility" = "Device code %@";
 "settings.version_subtitle" = "%@ · Quản lý quota cao cấp";

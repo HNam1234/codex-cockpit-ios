@@ -4,7 +4,6 @@ struct CockpitView: View {
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var store: CockpitStore
     @EnvironmentObject private var mappings: ProfileMappingStore
-    @EnvironmentObject private var directOAuth: DirectOAuthStore
 
     var body: some View {
         Group {
@@ -84,8 +83,7 @@ struct CockpitView: View {
                         Button { router.showAccount(account.id) } label: {
                             AccountOverviewCard(
                                 account: account,
-                                displayIdentity: mappings.displayIdentity(for: account),
-                                hasDirectOAuthRegistration: hasDirectOAuthRegistration(for: account)
+                                displayIdentity: mappings.displayIdentity(for: account)
                             )
                         }
                         .buttonStyle(.plain)
@@ -100,15 +98,7 @@ struct CockpitView: View {
     }
 
     private var attentionCount: Int {
-        store.accounts.filter {
-            $0.health(
-                hasDirectOAuthRegistration: hasDirectOAuthRegistration(for: $0)
-            ).needsAttention
-        }.count
-    }
-
-    private func hasDirectOAuthRegistration(for account: AccountSnapshot) -> Bool {
-        directOAuth.hasRegistration(for: mappings.profile(for: account.id).id)
+        store.accounts.filter { $0.health().needsAttention }.count
     }
 }
 
@@ -191,12 +181,9 @@ struct TiboResetBanner: View {
 struct AccountOverviewCard: View {
     let account: AccountSnapshot
     let displayIdentity: String
-    let hasDirectOAuthRegistration: Bool
 
     var body: some View {
-        let health = account.health(
-            hasDirectOAuthRegistration: hasDirectOAuthRegistration
-        )
+        let health = account.health()
         HStack(spacing: 9) {
             ProfileArtwork(
                 seed: account.id,
@@ -219,13 +206,12 @@ struct AccountOverviewCard: View {
             }
             .frame(maxWidth: 112, alignment: .leading)
             Spacer(minLength: 2)
-            if account.isAuthenticated(hasDirectOAuthRegistration: hasDirectOAuthRegistration),
-               !account.windows.isEmpty {
+            if account.isAuthenticated(), !account.windows.isEmpty {
                 VStack(spacing: 6) {
                     ForEach(account.windows.prefix(2)) { window in MiniQuotaRow(window: window) }
                 }
                 .frame(width: 132)
-            } else if hasDirectOAuthRegistration || (account.ok && account.isLocalDirect) {
+            } else if account.ok && account.isLocalDirect {
                 Label(L10n.text("oauth.direct.connected.compact"), systemImage: "checkmark.shield.fill")
                     .font(.caption2.weight(.bold))
                     .foregroundStyle(.green)

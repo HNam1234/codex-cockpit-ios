@@ -109,10 +109,11 @@ assert "VerificationCodeExtractor.codes" in message_view_source
 accounts_source = (root / "CodexCockpit/Views/AccountsView.swift").read_text(encoding="utf-8")
 assert 'L10n.text("accounts.add_with_webkit")' in accounts_source
 assert "Code từ PC" in accounts_source
-assert "startDirectOAuth" in accounts_source
+assert "startQuotaLogin" in accounts_source
 assert "createAccount(name:" in accounts_source
 assert "createLocalAccount" not in accounts_source
-assert "beginReauthorization" not in accounts_source
+assert "beginReauthorization" in accounts_source
+assert "recoverMappedOAuthQuota" not in root_source
 assert "ProfileDataStore.clear" in accounts_source
 assert "AccountQuotaSnapshot" in accounts_source
 assert "window.remainingPercent" in accounts_source
@@ -158,8 +159,8 @@ for preview in (
     assert preview in workflow_text, f"missing Mail preview: {preview}"
 
 project_text = (root / "project.yml").read_text(encoding="utf-8")
-assert project_text.count('MARKETING_VERSION: "1.10.0"') == 1
-assert project_text.count('CURRENT_PROJECT_VERSION: "26"') == 1
+assert project_text.count('MARKETING_VERSION: "1.10.1"') == 1
+assert project_text.count('CURRENT_PROJECT_VERSION: "27"') == 1
 
 api_source = (root / "CodexCockpit/Services/CockpitAPI.swift").read_text(encoding="utf-8")
 assert "app-account/create" in api_source

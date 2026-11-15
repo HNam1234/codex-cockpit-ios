@@ -233,16 +233,16 @@ struct AccountSnapshot: Decodable, Identifiable, Hashable, Sendable {
         return expiration <= now
     }
 
-    func isAuthenticated(hasDirectOAuthRegistration: Bool = false) -> Bool {
-        ok || hasDirectOAuthRegistration
+    func isAuthenticated(hasDirectOAuthRegistration _: Bool = false) -> Bool {
+        isLocalDirect ? ok : ok && !windows.isEmpty
     }
 
     func health(
         at now: Date = .now,
-        hasDirectOAuthRegistration: Bool = false
+        hasDirectOAuthRegistration _: Bool = false
     ) -> AccountHealth {
-        if isLocalDirect || hasDirectOAuthRegistration {
-            guard isAuthenticated(hasDirectOAuthRegistration: hasDirectOAuthRegistration) else {
+        if isLocalDirect {
+            guard isAuthenticated() else {
                 return .needsLogin
             }
             if subscriptionIsExpired(at: now) { return .expired }
@@ -463,11 +463,6 @@ final class ProfileMappingStore: ObservableObject {
                 used.insert(available.id)
             }
         }
-        for (profileID, identity) in webIdentities {
-            if let accountID = uniqueAccountID(matching: identity, accounts: accounts) {
-                assignMapping(accountID: accountID, to: profileID)
-            }
-        }
         save()
     }
 
@@ -498,13 +493,14 @@ final class ProfileMappingStore: ObservableObject {
         webIdentities[profileID] = identity
         if let mappedAccountID {
             assignMapping(accountID: mappedAccountID, to: profileID)
-        } else if let accountID = uniqueAccountID(matching: identity, accounts: accounts) {
-            assignMapping(accountID: accountID, to: profileID)
         }
         save()
     }
 
     func displayIdentity(for account: AccountSnapshot) -> String {
+        if account.ok, let email = Self.nonEmpty(account.email) {
+            return email
+        }
         let profileID = mappings[account.id] ?? account.id
         if let identity = webIdentities[profileID] {
             return identity.label

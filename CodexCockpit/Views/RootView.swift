@@ -107,7 +107,6 @@ struct RootView: View {
                   scenePhase == .active else { return }
             await store.load()
             mappings.synchronize(accounts: store.accounts)
-            await recoverMappedOAuthQuota()
             await mailStore.handleForeground(validAccountIDs: Set(store.accounts.map(\.id)))
             await identityScanner.scan(profiles: mappings.profiles) { profileID, identity in
                 mappings.record(identity: identity, for: profileID, accounts: store.accounts)
@@ -131,19 +130,6 @@ struct RootView: View {
         }
         .onChange(of: store.tiboReset) { _, signal in
             tiboNotifications.process(signal)
-        }
-    }
-
-    @MainActor
-    private func recoverMappedOAuthQuota() async {
-        for account in store.accounts {
-            let profile = mappings.profile(for: account.id)
-            guard let registration = directOAuth.registration(for: profile.id) else { continue }
-            guard store.needsDirectOAuthRecovery(
-                accountID: account.id,
-                registration: registration
-            ) else { continue }
-            _ = await store.importDirectOAuth(accountID: account.id, registration: registration)
         }
     }
 
