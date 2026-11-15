@@ -3,6 +3,50 @@ import XCTest
 
 @MainActor
 final class CockpitStoreTests: XCTestCase {
+    func testImportDirectOAuthReplacesMappedRemoteAccountWithLiveQuota() async throws {
+        let initial = AccountSnapshot(
+            id: "1",
+            name: "Codex 1",
+            displayName: nil,
+            email: nil,
+            plan: nil,
+            subscriptionExpiresAt: nil,
+            ok: false,
+            error: "Cần đăng nhập",
+            windows: [],
+            resetCredits: 0,
+            checkedAt: 100
+        )
+        let api = CockpitAPIStub(accounts: [initial])
+        let store = CockpitStore(api: api)
+        await store.load()
+        let registration = DirectOAuthRegistration(
+            profileID: "3",
+            clientID: "client_1234567890",
+            subject: "user-123",
+            email: "person@example.com",
+            name: "Person",
+            idToken: "header.payload.signature",
+            accessToken: "access.payload.signature",
+            refreshToken: "refresh-token-value",
+            tokenType: "Bearer",
+            scopes: ["openid", "offline_access"],
+            expiresAt: 2_000_000_000,
+            earliestRefreshAt: nil
+        )
+
+        let imported = await store.importDirectOAuth(accountID: "1", registration: registration)
+
+        XCTAssertEqual(imported?.id, "1")
+        XCTAssertEqual(store.account(id: "1")?.email, "person@example.com")
+        XCTAssertEqual(store.account(id: "1")?.windows.first?.remainingPercent, 88)
+        let capturedRequest = await api.importRequest()
+        let request = try XCTUnwrap(capturedRequest)
+        XCTAssertEqual(request.accountID, "1")
+        XCTAssertEqual(request.profileID, "3")
+        XCTAssertNil(store.errorMessage)
+    }
+
     func testRefreshAllRequestsEveryVisibleAccountAndReplacesQuotaSnapshots() async {
         let initialAccounts = [
             account(id: "1", displayName: "Old One", remaining: 10),
@@ -74,12 +118,14 @@ final class CockpitStoreTests: XCTestCase {
 private actor CockpitAPIStub: CockpitAPIClient {
     private let initialAccounts: [AccountSnapshot]
     private var requestedIDs: [String] = []
+    private var importedRequest: (accountID: String, profileID: String)?
 
     init(accounts: [AccountSnapshot]) {
         initialAccounts = accounts
     }
 
     func requestedAccountIDs() -> [String] { requestedIDs }
+    func importRequest() -> (accountID: String, profileID: String)? { importedRequest }
 
     func status() async throws -> NativeStatusResponse {
         NativeStatusResponse(
@@ -128,6 +174,32 @@ private actor CockpitAPIStub: CockpitAPIClient {
 
     func authorizationStatus(sessionID: String) async throws -> LoginSession {
         throw StubError.unused
+    }
+
+    func importDirectOAuth(
+        accountID: String,
+        registration: DirectOAuthRegistration
+    ) async throws -> AccountSnapshot {
+        importedRequest = (accountID, registration.profileID)
+        return AccountSnapshot(
+            id: accountID,
+            name: "Codex \(accountID)",
+            displayName: "Person",
+            email: registration.email,
+            plan: "plus",
+            subscriptionExpiresAt: 2_000_000_000,
+            ok: true,
+            error: nil,
+            windows: [QuotaWindow(
+                label: "5 giờ",
+                remainingPercent: 88,
+                usedPercent: 12,
+                resetsAt: 2_000_000_000,
+                windowMinutes: 300
+            )],
+            resetCredits: 0,
+            checkedAt: 300
+        )
     }
 
     func consumeResetCredit(accountID: String, idempotencyKey: String) async throws -> ResetCreditResult {
