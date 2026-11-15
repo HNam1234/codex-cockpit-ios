@@ -248,7 +248,8 @@ actor DirectOAuthClient {
             URLQueryItem(name: "code", value: capture.callback.code),
             URLQueryItem(name: "redirect_uri", value: capture.attempt.redirectURI.absoluteString),
             URLQueryItem(name: "client_id", value: clientID),
-            URLQueryItem(name: "code_verifier", value: capture.attempt.codeVerifier)
+            URLQueryItem(name: "code_verifier", value: capture.attempt.codeVerifier),
+            URLQueryItem(name: "resource", value: DirectOAuthFlow.resource)
         ]
         request.httpBody = form.percentEncodedQuery?.data(using: .utf8)
 
