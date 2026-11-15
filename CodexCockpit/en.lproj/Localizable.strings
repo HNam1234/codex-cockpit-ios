@@ -73,6 +73,8 @@
 "account.generic" = "account";
 "account.not_signed_in" = "NOT SIGNED IN";
 "reset.credit_count" = "Reset credit · %d";
+"reset.remaining.compact" = "%d resets left";
+"reset.remaining.unavailable" = "Reset · —";
 "authorization.completed" = "Completed";
 "quota.login.action" = "Sign in for quota";
 "quota.login.compact" = "Quota";

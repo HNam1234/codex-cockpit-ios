@@ -203,6 +203,19 @@ struct AccountOverviewCard: View {
                         .foregroundStyle(account.subscriptionIsExpired() ? .red : CockpitTheme.violet)
                         .lineLimit(1)
                 }
+                Label(
+                    account.ok && !account.isLocalDirect
+                        ? L10n.format("reset.remaining.compact", max(0, account.resetCredits))
+                        : L10n.text("reset.remaining.unavailable"),
+                    systemImage: "arrow.counterclockwise.circle.fill"
+                )
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(account.ok && account.resetCredits > 0
+                    ? CockpitTheme.violet : Color.secondary)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 3)
+                .background(CockpitTheme.violet.opacity(0.07), in: Capsule())
+                .lineLimit(1)
             }
             .frame(maxWidth: 112, alignment: .leading)
             Spacer(minLength: 2)

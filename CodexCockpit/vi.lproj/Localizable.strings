@@ -73,6 +73,8 @@
 "account.generic" = "tài khoản";
 "account.not_signed_in" = "CHƯA ĐĂNG NHẬP";
 "reset.credit_count" = "Reset credit · %d";
+"reset.remaining.compact" = "%d lượt reset";
+"reset.remaining.unavailable" = "Reset · —";
 "authorization.completed" = "Hoàn tất";
 "quota.login.action" = "Đăng nhập quota";
 "quota.login.compact" = "Quota";

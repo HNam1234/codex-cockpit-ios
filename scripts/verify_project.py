@@ -159,8 +159,8 @@ for preview in (
     assert preview in workflow_text, f"missing Mail preview: {preview}"
 
 project_text = (root / "project.yml").read_text(encoding="utf-8")
-assert project_text.count('MARKETING_VERSION: "1.10.2"') == 1
-assert project_text.count('CURRENT_PROJECT_VERSION: "28"') == 1
+assert project_text.count('MARKETING_VERSION: "1.10.3"') == 1
+assert project_text.count('CURRENT_PROJECT_VERSION: "29"') == 1
 
 api_source = (root / "CodexCockpit/Services/CockpitAPI.swift").read_text(encoding="utf-8")
 assert "app-account/create" in api_source
