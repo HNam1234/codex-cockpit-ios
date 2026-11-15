@@ -43,6 +43,7 @@ struct AccountsView: View {
                     }
                 }
                 .accessibilityLabel("Thêm tài khoản")
+                .disabled(store.isCreatingAccount)
             }
         }
         .sheet(item: $authorizationAccount) { account in
@@ -237,17 +238,23 @@ struct AccountsView: View {
 
     private var addAccountButton: some View {
         Button { createAndOpenAccount() } label: {
-            Label("Thêm account + WebKit", systemImage: "plus.circle.fill")
+            Label(
+                store.isCreatingAccount ? L10n.text("accounts.creating") : L10n.text("accounts.add_with_webkit"),
+                systemImage: store.isCreatingAccount ? "arrow.triangle.2.circlepath" : "plus.circle.fill"
+            )
                 .font(.subheadline.weight(.bold)).frame(maxWidth: .infinity).padding(.vertical, 13)
         }
         .buttonStyle(.plain).foregroundStyle(CockpitTheme.accent)
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .disabled(store.isCreatingAccount)
     }
 
     private func createAndOpenAccount() {
-        let account = store.createLocalAccount()
-        mappings.createDedicatedProfile(for: account.id)
-        startDirectOAuth(for: account)
+        Task {
+            guard let account = await store.createAccount(name: "") else { return }
+            mappings.createDedicatedProfile(for: account.id)
+            startDirectOAuth(for: account)
+        }
     }
 
     private func delete(_ account: AccountSnapshot, deleteMailbox: Bool) async {

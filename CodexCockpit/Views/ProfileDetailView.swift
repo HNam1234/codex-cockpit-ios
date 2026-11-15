@@ -370,7 +370,7 @@ struct AccountBrowserView: View {
                 deviceCodeBar(code)
             }
             if isCompletingDirectOAuth {
-                Label("Đang xác minh email và lưu vào Keychain…", systemImage: "checkmark.shield.fill")
+                Label(L10n.text("oauth.direct.syncingQuota"), systemImage: "arrow.triangle.2.circlepath.circle.fill")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(CockpitTheme.accent)
                     .padding(.horizontal, 14)
@@ -535,7 +535,12 @@ struct AccountBrowserView: View {
             if let identity = WebAccountIdentity(name: registration.name, email: registration.email) {
                 mappings.record(identity: identity, for: profile.id, accounts: store.accounts)
             }
-            store.completeLocalOAuth(accountID: accountID, email: registration.email)
+            if store.account(id: accountID)?.isLocalDirect == true {
+                store.completeLocalOAuth(accountID: accountID, email: registration.email)
+            } else if await store.importDirectOAuth(accountID: accountID, registration: registration) == nil {
+                browser.errorMessage = "oauth.direct.error.quotaSync"
+                return
+            }
             browser.errorMessage = nil
             directOAuthResult = registration
         } catch let error as DirectOAuthError {

@@ -182,6 +182,14 @@
 "oauth.direct.error.unverifiedEmail" = "OpenAI không trả về email đã xác minh cho account này.";
 "oauth.direct.error.identityMismatch" = "Đây là account OpenAI khác với account đã map vào WebKit này.";
 "oauth.direct.error.keychainFailure" = "Không thể lưu credential an toàn vào Keychain.";
+"oauth.direct.error.quotaSync" = "Không thể đồng bộ quota. Account cũ đã được giữ nguyên; hãy thử OAuth lại.";
+"oauth.direct.error.remoteAccountRequired" = "Account này chưa có slot quota trên máy chủ.";
+"oauth.direct.syncingQuota" = "Đang xác minh và đồng bộ quota…";
+"oauth.direct.success.title" = "Đã kết nối và có quota";
+"oauth.direct.success.detail" = "Email đã xác minh là tên account. Quota sẽ tự cập nhật ngay trên app.";
+"oauth.direct.success.continue" = "Tiếp tục vào ChatGPT";
+"accounts.add_with_webkit" = "Thêm account + WebKit";
+"accounts.creating" = "Đang tạo slot quota…";
 
 /* Cockpit OAuth relay */
 "OAuth Cockpit" = "OAuth Cockpit";

@@ -47,6 +47,32 @@ final class CockpitStoreTests: XCTestCase {
         XCTAssertNil(store.errorMessage)
     }
 
+    func testOAuthRecoveryOnlyTargetsBrokenRemoteAccounts() async {
+        let api = CockpitAPIStub(accounts: [
+            account(id: "1", displayName: "Healthy", remaining: 75),
+            AccountSnapshot(
+                id: "2",
+                name: "Codex 2",
+                displayName: nil,
+                email: nil,
+                plan: nil,
+                subscriptionExpiresAt: nil,
+                ok: false,
+                error: "Cần đăng nhập",
+                windows: [],
+                resetCredits: 0,
+                checkedAt: 100
+            )
+        ])
+        let store = CockpitStore(api: api)
+        await store.load()
+
+        XCTAssertFalse(store.needsDirectOAuthRecovery(accountID: "1"))
+        XCTAssertTrue(store.needsDirectOAuthRecovery(accountID: "2"))
+        XCTAssertFalse(store.needsDirectOAuthRecovery(accountID: "local:legacy"))
+        XCTAssertFalse(store.needsDirectOAuthRecovery(accountID: "missing"))
+    }
+
     func testRefreshAllRequestsEveryVisibleAccountAndReplacesQuotaSnapshots() async {
         let initialAccounts = [
             account(id: "1", displayName: "Old One", remaining: 10),

@@ -107,10 +107,11 @@ for forbidden_renderer in ("WKWebView", "WebView", "NSAttributedString", "loadHT
 assert "VerificationCodeExtractor.codes" in message_view_source
 
 accounts_source = (root / "CodexCockpit/Views/AccountsView.swift").read_text(encoding="utf-8")
-assert "Thêm account + WebKit" in accounts_source
+assert 'L10n.text("accounts.add_with_webkit")' in accounts_source
 assert "Code từ PC" in accounts_source
 assert "startDirectOAuth" in accounts_source
-assert "createLocalAccount" in accounts_source
+assert "createAccount(name:" in accounts_source
+assert "createLocalAccount" not in accounts_source
 assert "beginReauthorization" not in accounts_source
 assert "ProfileDataStore.clear" in accounts_source
 assert "AccountQuotaSnapshot" in accounts_source
@@ -137,6 +138,10 @@ for key in (
     "mail.lifetime.60",
     "mail.code.copy",
     "mail.provider.attribution",
+    "oauth.direct.syncingQuota",
+    "oauth.direct.error.quotaSync",
+    "accounts.add_with_webkit",
+    "accounts.creating",
 ):
     assert f'"{key}"' in english_strings, f"missing English localization: {key}"
     assert f'"{key}"' in vietnamese_strings, f"missing Vietnamese localization: {key}"
@@ -153,12 +158,13 @@ for preview in (
     assert preview in workflow_text, f"missing Mail preview: {preview}"
 
 project_text = (root / "project.yml").read_text(encoding="utf-8")
-assert project_text.count('MARKETING_VERSION: "1.9.2"') == 1
-assert project_text.count('CURRENT_PROJECT_VERSION: "25"') == 1
+assert project_text.count('MARKETING_VERSION: "1.10.0"') == 1
+assert project_text.count('CURRENT_PROJECT_VERSION: "26"') == 1
 
 api_source = (root / "CodexCockpit/Services/CockpitAPI.swift").read_text(encoding="utf-8")
 assert "app-account/create" in api_source
 assert "app-account/delete" in api_source
+assert "app-auth/import" in api_source
 
 for path in (root / "CodexCockpit/Assets.xcassets").rglob("Contents.json"):
     json.loads(path.read_text(encoding="utf-8"))

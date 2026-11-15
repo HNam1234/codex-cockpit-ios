@@ -182,6 +182,14 @@
 "oauth.direct.error.unverifiedEmail" = "OpenAI did not return a verified email for this account.";
 "oauth.direct.error.identityMismatch" = "This is a different OpenAI account from the one mapped to this WebKit.";
 "oauth.direct.error.keychainFailure" = "The secure credential could not be saved in Keychain.";
+"oauth.direct.error.quotaSync" = "Quota sync failed. The previous account was preserved; retry OAuth.";
+"oauth.direct.error.remoteAccountRequired" = "This account does not have a server quota slot yet.";
+"oauth.direct.syncingQuota" = "Verifying and syncing quota…";
+"oauth.direct.success.title" = "Connected with live quota";
+"oauth.direct.success.detail" = "The verified email is the account name. Quota now updates directly in the app.";
+"oauth.direct.success.continue" = "Continue to ChatGPT";
+"accounts.add_with_webkit" = "Add account + WebKit";
+"accounts.creating" = "Creating quota slot…";
 
 /* Cockpit OAuth relay */
 "OAuth Cockpit" = "Cockpit OAuth";

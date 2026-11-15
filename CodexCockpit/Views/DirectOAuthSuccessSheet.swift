@@ -17,21 +17,21 @@ struct DirectOAuthSuccessSheet: View {
                 }
 
                 VStack(spacing: 6) {
-                    Text("Đã kết nối trực tiếp")
+                    Text(L10n.text("oauth.direct.success.title"))
                         .font(.title3.weight(.bold))
                     Text(registration.email)
                         .font(.headline.monospaced())
                         .foregroundStyle(CockpitTheme.accent)
                         .lineLimit(1)
                         .minimumScaleFactor(0.72)
-                    Text("Email đã xác minh này là tên account. Token chỉ lưu trong Keychain cục bộ trên iPhone.")
+                    Text(L10n.text("oauth.direct.success.detail"))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                 }
 
                 Button(action: onContinue) {
-                    Label("Tiếp tục vào ChatGPT", systemImage: "safari.fill")
+                    Label(L10n.text("oauth.direct.success.continue"), systemImage: "safari.fill")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(CapsuleActionStyle(tint: CockpitTheme.accent))

@@ -22,6 +22,7 @@ protocol CockpitAPIClient: Sendable {
     func refresh(accountID: String) async throws -> AccountSnapshot
     func startAuthorization(accountID: String) async throws -> LoginSession
     func authorizationStatus(sessionID: String) async throws -> LoginSession
+    func importDirectOAuth(accountID: String, registration: DirectOAuthRegistration) async throws -> AccountSnapshot
     func consumeResetCredit(accountID: String, idempotencyKey: String) async throws -> ResetCreditResult
     func createAccount(name: String) async throws -> AccountSnapshot
     func deleteAccount(accountID: String) async throws
@@ -59,6 +60,27 @@ actor CockpitAPI: CockpitAPIClient {
             as: LoginEnvelope.self
         )
         return envelope.login
+    }
+
+    func importDirectOAuth(
+        accountID: String,
+        registration: DirectOAuthRegistration
+    ) async throws -> AccountSnapshot {
+        let envelope = try await post(
+            "app-auth/import",
+            values: [
+                "account_id": accountID,
+                "client_id": registration.clientID,
+                "id_token": registration.idToken,
+                "access_token": registration.accessToken,
+                "refresh_token": registration.refreshToken ?? ""
+            ],
+            as: AccountEnvelope.self
+        )
+        guard envelope.account.id == accountID else {
+            throw CockpitAPIError.invalidResponse
+        }
+        return envelope.account
     }
 
     func consumeResetCredit(accountID: String, idempotencyKey: String) async throws -> ResetCreditResult {

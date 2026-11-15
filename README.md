@@ -9,11 +9,11 @@ SwiftUI app for iOS 17+ with a native quota dashboard and a dynamic number of pe
 - Pull down on the overview to refresh every account quota and then reload the consolidated dashboard state.
 - Compact native overview with correct remaining-quota progress bars; tap an account for full reset times and actions.
 - Shows the remaining Plus/Pro subscription days from the authenticated Codex account claim, separately from quota reset times.
-- Accounts are dynamic: tap `+` to create a local account and its dedicated persistent WebKit together, authorize it inside the app, or remove both freely.
+- Accounts are dynamic: tap `+` to create a VPS quota slot and its dedicated persistent WebKit together, authorize it inside the app, or remove both freely.
 - Dynamic account count and dynamic independent ChatGPT sessions backed by persistent `WKWebsiteDataStore` identifiers.
 - Verified OpenAI email is the account name everywhere. Account-to-WebKit mappings reconcile automatically with the signed-in ChatGPT identity.
 - Optional local TIBO notifications explain the public signal, avoid duplicate alerts, and never include private account data.
-- Direct OpenAI OAuth uses dynamic client registration, PKCE, nonce/state validation, signed ID-token verification, and per-WebKit Keychain storage. Authorization always opens in the selected account's mapped WebKit.
+- Direct OpenAI OAuth uses dynamic client registration, PKCE, nonce/state validation, signed ID-token verification, and per-WebKit Keychain storage. Authorization always opens in the selected account's mapped WebKit, then transactionally imports that login into the same mapped VPS slot so native quota appears immediately.
 - Refresh usage and consume a real reset credit from the native account screen when the Codex account exposes one.
 - One global TIBO reset banner fetched by the VPS from the public OpenTheRank tracker every 15 minutes. No account data is sent to TIBO or OpenTheRank.
 - Device-code entry opens `auth.openai.com/codex/device` inside the selected profile and attempts to fill the code. The user still confirms on the official OpenAI page.
@@ -84,6 +84,8 @@ Do not publish or share the resulting personalized IPA: its embedded credential 
 
 The account list is loaded dynamically and is not capped at five. Install upgrades over the existing app with the same Bundle ID and signing team. Changing the Bundle ID or deleting the app creates/removes the iOS sandbox, so WebKit cookies cannot be carried across that boundary.
 
+After direct OAuth succeeds, the app sends only the issued OAuth credentials—not WebKit cookies or browser storage—over the authenticated Tailscale HTTPS connection for the explicitly mapped account ID. The VPS validates matching token claims, installs Codex credentials atomically, and keeps them only when Codex app-server returns a healthy live quota snapshot. A failed import restores the previous account credentials. The VPS owns subsequent token refreshes; pull-to-refresh and normal polling continue using the same quota path as older accounts.
+
 ## Cockpit Browser OAuth relay (no VPS)
 
 Direct OAuth inside the iPhone app is now the default. Use this legacy relay only when a Cockpit PC session specifically needs to remain the OAuth client and token owner:
@@ -99,7 +101,7 @@ Never share an authorization or callback URL: it is short-lived authentication m
 
 ## Current validation boundary
 
-The macOS CI workflow builds the IPA and runs the Xcode unit/UI tests. Direct OAuth and device-login confirmation still happen on the official OpenAI page; third-party SSO providers may choose to redirect outside embedded web views. OpenAI's public direct-token flow does not expose ChatGPT's numeric 5-hour/weekly quota API, so numeric quota remains available only for existing dashboard-backed accounts.
+The macOS CI workflow builds the IPA and runs the Xcode unit/UI tests. Direct OAuth and device-login confirmation still happen on the official OpenAI page; third-party SSO providers may choose to redirect outside embedded web views. OpenAI's OAuth response itself does not contain numeric 5-hour/weekly quota. This personalized build therefore imports the completed login into its mapped dashboard slot and reads quota through Codex app-server, the same path used by existing accounts.
 
 ## Personalized IPA
 

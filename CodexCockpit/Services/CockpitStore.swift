@@ -39,6 +39,14 @@ final class CockpitStore: ObservableObject {
         accounts.first(where: { $0.id == id })
     }
 
+    func needsDirectOAuthRecovery(accountID: String) -> Bool {
+        guard !Self.isLocalAccountID(accountID),
+              let account = remoteAccounts.first(where: { $0.id == accountID }) else {
+            return false
+        }
+        return !account.ok
+    }
+
     func load() async {
         guard !isLoading else { return }
         isLoading = true
@@ -173,6 +181,33 @@ final class CockpitStore: ObservableObject {
         localAccounts[index].connected = true
         saveLocalAccounts()
         rebuildAccounts()
+    }
+
+    @discardableResult
+    func importDirectOAuth(
+        accountID: String,
+        registration: DirectOAuthRegistration
+    ) async -> AccountSnapshot? {
+        guard !Self.isLocalAccountID(accountID),
+              remoteAccounts.contains(where: { $0.id == accountID }) else {
+            errorMessage = L10n.text("oauth.direct.error.remoteAccountRequired")
+            return nil
+        }
+        busyAccounts.insert(accountID)
+        defer { busyAccounts.remove(accountID) }
+        do {
+            let account = try await api.importDirectOAuth(
+                accountID: accountID,
+                registration: registration
+            )
+            guard account.id == accountID else { throw CockpitAPIError.invalidResponse }
+            replace(account)
+            errorMessage = nil
+            return account
+        } catch {
+            errorMessage = error.localizedDescription
+            return nil
+        }
     }
 
     func disconnectLocalOAuth(accountID: String) {
