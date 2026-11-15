@@ -111,6 +111,27 @@ final class MailTMClientTests: XCTestCase {
         XCTAssertNil(requests[3].httpBody)
     }
 
+    func testDecodesCurrentMailTMTopLevelArrayCollections() async throws {
+        MailTMURLProtocolStub.handler = { request in
+            switch request.url?.path {
+            case "/domains":
+                return Self.response(request, status: 200, json: Self.bareDomainsJSON)
+            case "/messages":
+                return Self.response(request, status: 200, json: Self.bareMessageListJSON)
+            default:
+                return Self.response(request, status: 404, json: "{}")
+            }
+        }
+        let client = makeClient()
+        let mailboxID = UUID(uuidString: "22222222-2222-4222-8222-222222222222")!
+
+        let domains = try await client.availableDomains()
+        let messages = try await client.listMessages(mailboxID: mailboxID, token: "secret-token")
+
+        XCTAssertEqual(domains.map(\.domain), ["example.test"])
+        XCTAssertEqual(messages.map(\.subject), ["Verify your account"])
+    }
+
     func testRejectsUnexpectedHostAndCrossHostRedirectWithoutLeakingSecrets() async {
         let client = makeClient(baseURL: URL(string: "https://api.mail.tm.evil/secret-token")!)
 
@@ -256,9 +277,13 @@ final class MailTMClientTests: XCTestCase {
 
     private static let domainsJSON = #"{"hydra:member":[{"id":"domain-id","domain":"example.test","isActive":true,"isPrivate":false,"createdAt":"2026-11-15T00:00:00+00:00","updatedAt":"2026-11-15T00:00:00+00:00"}],"hydra:totalItems":1}"#
 
+    private static let bareDomainsJSON = #"[{"id":"domain-id","domain":"example.test","isActive":true,"isPrivate":false,"createdAt":"2026-11-15T00:00:00+00:00","updatedAt":"2026-11-15T00:00:00+00:00"}]"#
+
     private static let accountJSON = #"{"id":"account-id","address":"random@example.test","quota":40000000,"used":0,"isDisabled":false,"isDeleted":false,"createdAt":"2026-11-15T00:00:00+00:00","updatedAt":"2026-11-15T00:00:00+00:00"}"#
 
     private static let messageListJSON = #"{"hydra:member":[{"id":"id/with space","accountId":"account-id","msgid":"msg-id","from":{"address":"noreply@example.com","name":"OpenAI"},"to":[{"address":"random@example.test","name":""}],"subject":"Verify your account","intro":"Your verification code","seen":false,"isDeleted":false,"hasAttachments":true,"size":123,"downloadUrl":"/messages/id/download","createdAt":"2026-11-15T00:00:00+00:00","updatedAt":"2026-11-15T00:00:00+00:00"}],"hydra:totalItems":1}"#
+
+    private static let bareMessageListJSON = #"[{"id":"id/with space","accountId":"account-id","msgid":"msg-id","from":{"address":"noreply@example.com","name":"OpenAI"},"to":[{"address":"random@example.test","name":""}],"subject":"Verify your account","intro":"Your verification code","seen":false,"isDeleted":false,"hasAttachments":true,"size":123,"downloadUrl":"/messages/id/download","createdAt":"2026-11-15T00:00:00+00:00","updatedAt":"2026-11-15T00:00:00+00:00"}]"#
 
     private static let messageDetailJSON = #"{"id":"id/with space","accountId":"account-id","msgid":"msg-id","from":{"address":"noreply@example.com","name":"OpenAI"},"to":[{"address":"random@example.test","name":""}],"subject":"Verify your account","intro":"Your verification code","seen":false,"isDeleted":false,"hasAttachments":true,"size":123,"downloadUrl":"/messages/id/download","text":"Your verification code is 482731","html":["<p>Your verification code is <b>482731</b></p>"],"attachments":[{"id":"attachment-id","filename":"notice.txt","contentType":"text/plain","disposition":"attachment","transferEncoding":"base64","related":false,"size":42,"downloadUrl":"/messages/id/attachment-id"}],"createdAt":"2026-11-15T00:00:00+00:00","updatedAt":"2026-11-15T00:00:00+00:00"}"#
 }
