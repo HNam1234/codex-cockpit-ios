@@ -4,6 +4,8 @@ struct SettingsView: View {
     @EnvironmentObject private var store: CockpitStore
     @EnvironmentObject private var mappings: ProfileMappingStore
     @EnvironmentObject private var tiboNotifications: TiboNotificationManager
+    @EnvironmentObject private var mailStore: DisposableMailStore
+    @State private var confirmingClearMail = false
 
     var body: some View {
         ZStack {
@@ -28,6 +30,19 @@ struct SettingsView: View {
                     settingsCard("Riêng tư", icon: "lock.shield.fill", tint: .green) {
                         Text("Cookie nằm trong sandbox WebKit trên iPhone. Mỗi session được quản lý hoàn toàn cục bộ.")
                             .font(.subheadline).foregroundStyle(.secondary)
+                    }
+                    settingsCard(L10n.text("mail.settings.title"), icon: "envelope.fill", tint: CockpitTheme.cyan) {
+                        LabeledContent(L10n.text("mail.provider.attribution"), value: "\(mailStore.activeMailboxes.count)")
+                        Divider()
+                        Text(L10n.text("mail.settings.privacy"))
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        if !mailStore.mailboxes.isEmpty {
+                            Divider()
+                            Button(L10n.text("mail.settings.clear"), role: .destructive) {
+                                confirmingClearMail = true
+                            }
+                        }
                     }
                     settingsCard("TIBO", icon: "waveform.path.ecg", tint: CockpitTheme.accent) {
                         Toggle(isOn: Binding(
@@ -58,6 +73,16 @@ struct SettingsView: View {
             }
         }
         .toolbarBackground(.hidden, for: .navigationBar)
+        .confirmationDialog(
+            L10n.text("mail.settings.clear_confirmation"),
+            isPresented: $confirmingClearMail,
+            titleVisibility: .visible
+        ) {
+            Button(L10n.text("mail.settings.clear"), role: .destructive) {
+                mailStore.clearLocalData()
+            }
+            Button(L10n.text("mail.cancel"), role: .cancel) {}
+        }
     }
 
     private var appVersion: String {

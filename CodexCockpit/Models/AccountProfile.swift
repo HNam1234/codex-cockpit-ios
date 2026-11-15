@@ -366,6 +366,7 @@ enum AppRoute: Hashable {
 enum AppTab: Hashable {
     case cockpit
     case profiles
+    case mail
     case settings
 }
 
@@ -374,6 +375,7 @@ final class AppRouter: ObservableObject {
     @Published var selectedTab: AppTab = .cockpit
     @Published var cockpitPath = NavigationPath()
     @Published var profilePath = NavigationPath()
+    @Published var mailPath = NavigationPath()
 
     func showAccount(_ accountID: String) {
         cockpitPath.append(AppRoute.accountDetail(accountID))
@@ -385,6 +387,11 @@ final class AppRouter: ObservableObject {
         } else {
             cockpitPath.append(AppRoute.browser(accountID, launch))
         }
+    }
+
+    func openMailbox(_ mailboxID: UUID) {
+        selectedTab = .mail
+        mailPath.append(mailboxID)
     }
 }
 

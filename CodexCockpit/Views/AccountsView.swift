@@ -6,6 +6,7 @@ struct AccountsView: View {
     @EnvironmentObject private var mappings: ProfileMappingStore
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var directOAuth: DirectOAuthStore
+    @EnvironmentObject private var mailStore: DisposableMailStore
     @State private var pendingDelete: AccountSnapshot?
     @State private var authorizationAccount: AccountSnapshot?
     @State private var previewOAuthEntry: CockpitOAuthEntryContext?
@@ -100,9 +101,20 @@ struct AccountsView: View {
             titleVisibility: .visible
         ) {
             if let account = pendingDelete {
-                Button("Xóa account và WebKit", role: .destructive) {
-                    pendingDelete = nil
-                    Task { await delete(account) }
+                if mailStore.mailbox(linkedTo: account.id) != nil {
+                    Button(L10n.text("mail.delete_account_keep"), role: .destructive) {
+                        pendingDelete = nil
+                        Task { await delete(account, deleteMailbox: false) }
+                    }
+                    Button(L10n.text("mail.delete_account_all"), role: .destructive) {
+                        pendingDelete = nil
+                        Task { await delete(account, deleteMailbox: true) }
+                    }
+                } else {
+                    Button("Xóa account và WebKit", role: .destructive) {
+                        pendingDelete = nil
+                        Task { await delete(account, deleteMailbox: false) }
+                    }
                 }
             }
             Button("Hủy", role: .cancel) { pendingDelete = nil }
@@ -229,9 +241,16 @@ struct AccountsView: View {
         startDirectOAuth(for: account)
     }
 
-    private func delete(_ account: AccountSnapshot) async {
+    private func delete(_ account: AccountSnapshot, deleteMailbox: Bool) async {
         let profile = mappings.profile(for: account.id)
         guard await store.deleteAccount(accountID: account.id) else { return }
+        if let mailbox = mailStore.mailbox(linkedTo: account.id) {
+            if deleteMailbox {
+                await mailStore.delete(mailboxID: mailbox.id)
+            } else {
+                mailStore.unlinkAccount(account.id)
+            }
+        }
         try? directOAuth.clear(profileID: profile.id)
         mappings.removeAccount(account.id)
         try? await ProfileDataStore.clear(identifier: profile.dataStoreIdentifier)

@@ -36,7 +36,8 @@ final class DisposableMailStore: ObservableObject {
         reminders: any DisposableMailReminderScheduling = DisposableMailReminderScheduler(),
         calendar: Calendar = .current,
         now: @escaping @Sendable () -> Date = { .now },
-        makeID: @escaping @Sendable () -> UUID = UUID.init
+        makeID: @escaping @Sendable () -> UUID = UUID.init,
+        initialSnapshot: DisposableMailSnapshot? = nil
     ) {
         self.provider = provider
         self.vault = vault
@@ -46,7 +47,7 @@ final class DisposableMailStore: ObservableObject {
         self.now = now
         self.makeID = makeID
 
-        let snapshot = (try? persistence.load()) ?? .empty
+        let snapshot = initialSnapshot ?? (try? persistence.load()) ?? .empty
         mailboxes = snapshot.mailboxes
         messagesByMailbox = snapshot.messagesByMailbox
     }
@@ -356,6 +357,26 @@ final class DisposableMailStore: ObservableObject {
         } catch {
             present(error)
         }
+    }
+
+    func clearLocalData() {
+        let ids = mailboxes.map(\.id)
+        for id in ids {
+            try? vault.delete(mailboxID: id)
+            reminders.cancel(mailboxID: id)
+        }
+        do {
+            try persistence.save(.empty)
+            mailboxes = []
+            messagesByMailbox = [:]
+            clearError()
+        } catch {
+            present(error)
+        }
+    }
+
+    func dismissError() {
+        clearError()
     }
 
     private func cleanupPartialAccount(

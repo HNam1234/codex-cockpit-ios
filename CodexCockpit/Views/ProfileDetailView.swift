@@ -7,6 +7,7 @@ struct AccountDetailView: View {
     @EnvironmentObject private var mappings: ProfileMappingStore
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var directOAuth: DirectOAuthStore
+    @EnvironmentObject private var mailStore: DisposableMailStore
     @State private var confirmingReset = false
     @State private var resetMessage: String?
     @State private var showingDeviceAuthorization = false
@@ -21,6 +22,7 @@ struct AccountDetailView: View {
                         accountHero(account)
                         quotaCard(account)
                         webKitCard
+                        temporaryMailCard(account)
                         actionGrid(account)
                     if let session = store.loginSessions[accountID] {
                         AuthorizationStatusCard(session: session) {
@@ -156,6 +158,52 @@ struct AccountDetailView: View {
             .buttonStyle(CapsuleActionStyle(tint: CockpitTheme.accent))
         }
         .padding(18).glassCard()
+    }
+
+    private func temporaryMailCard(_ account: AccountSnapshot) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeading(title: L10n.text("mail.account.card"), caption: L10n.text("mail.provider.attribution"))
+            if let mailbox = mailStore.mailbox(linkedTo: accountID) {
+                HStack(spacing: 12) {
+                    ProfileArtwork(seed: mailbox.address, symbol: "envelope.fill", size: 48)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(mailbox.address).font(.headline).lineLimit(1)
+                        Text(L10n.format("mail.remaining_days", mailbox.remainingDays()))
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(CockpitTheme.violet)
+                        if mailbox.unreadCount > 0 {
+                            Text(L10n.format("mail.unread_count", mailbox.unreadCount))
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(CockpitTheme.accent)
+                        }
+                    }
+                    Spacer()
+                }
+                Button { router.openMailbox(mailbox.id) } label: {
+                    Label(L10n.text("mail.open"), systemImage: "tray.full.fill")
+                }
+                .buttonStyle(CapsuleActionStyle(tint: CockpitTheme.cyan))
+            } else {
+                Text(L10n.text("mail.empty.description"))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Button {
+                    Task {
+                        _ = await mailStore.create(lifetime: .default, linkedAccountID: accountID)
+                    }
+                } label: {
+                    if mailStore.isCreating {
+                        ProgressView().tint(.white)
+                    } else {
+                        Label(L10n.text("mail.create_for_account"), systemImage: "plus.circle.fill")
+                    }
+                }
+                .buttonStyle(CapsuleActionStyle(tint: CockpitTheme.cyan))
+                .disabled(mailStore.isCreating)
+            }
+        }
+        .padding(18)
+        .glassCard()
     }
 
     private func actionGrid(_ account: AccountSnapshot) -> some View {
