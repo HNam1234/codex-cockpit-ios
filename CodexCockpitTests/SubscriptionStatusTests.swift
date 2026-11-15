@@ -79,6 +79,30 @@ final class SubscriptionStatusTests: XCTestCase {
         XCTAssertEqual(account(expiresAt: 2_000_000, remaining: 80).health(at: now), .healthy)
     }
 
+    func testDirectOAuthRegistrationMakesExistingDashboardSlotConnected() {
+        let now = Date(timeIntervalSince1970: 1_000_000)
+        let disconnected = AccountSnapshot(
+            id: "1",
+            name: "Codex 1",
+            displayName: nil,
+            email: nil,
+            plan: nil,
+            subscriptionExpiresAt: nil,
+            ok: false,
+            error: "Sign in required",
+            windows: [],
+            resetCredits: 0,
+            checkedAt: 0
+        )
+
+        XCTAssertEqual(disconnected.health(at: now), .needsLogin)
+        XCTAssertTrue(disconnected.isAuthenticated(hasDirectOAuthRegistration: true))
+        XCTAssertEqual(
+            disconnected.health(at: now, hasDirectOAuthRegistration: true),
+            .healthy
+        )
+    }
+
     private func account(expiresAt: Int?, ok: Bool = true, remaining: Double = 80) -> AccountSnapshot {
         AccountSnapshot(
             id: "2",
