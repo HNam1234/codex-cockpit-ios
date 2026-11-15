@@ -11,14 +11,14 @@ SwiftUI app for iOS 17+ with a native quota dashboard and a dynamic number of pe
 - Shows the remaining Plus/Pro subscription days from the authenticated Codex account claim, separately from quota reset times.
 - Accounts are dynamic: tap `+` to create a VPS quota slot and its dedicated persistent WebKit together, authorize it inside the app, or remove both freely.
 - Dynamic account count and dynamic independent ChatGPT sessions backed by persistent `WKWebsiteDataStore` identifiers.
-- Verified OpenAI email is the account name everywhere. Account-to-WebKit mappings reconcile automatically with the signed-in ChatGPT identity.
+- The authenticated VPS quota email is the account name. Account-to-WebKit mappings stay fixed; detecting a different email never silently swaps another account's WebKit.
 - Optional local TIBO notifications explain the public signal, avoid duplicate alerts, and never include private account data.
-- Direct OpenAI OAuth uses dynamic client registration, PKCE, nonce/state validation, signed ID-token verification, and per-WebKit Keychain storage. Authorization always opens in the selected account's mapped WebKit, then transactionally imports that login into the same mapped VPS slot so native quota appears immediately.
+- **Sign in for quota / Đăng nhập quota** starts Codex device authorization on the VPS, opens the code in the selected account's mapped WebKit, and polls until the VPS returns the authenticated email and quota. The successful snapshot is persisted immediately for subsequent dashboard loads. Local OAuth registrations alone cannot mark remote quota as connected.
 - Refresh usage and consume a real reset credit from the native account screen when the Codex account exposes one.
 - One global TIBO reset banner fetched by the VPS from the public OpenTheRank tracker every 15 minutes. No account data is sent to TIBO or OpenTheRank.
 - Device-code entry opens `auth.openai.com/codex/device` inside the selected profile and attempts to fill the code. The user still confirms on the official OpenAI page.
 - Device code is only copied to the local iPhone clipboard; the app does not upload it.
-- Cockpit Browser OAuth can reuse the already signed-in account in each mapped WebKit without giving the iPhone the PC's token store. Cockpit on the PC remains the OAuth client and token owner.
+- **Code from PC** remains a separate convenience action for approving a device code generated on the user's PC. That action signs in the PC; quota in this app uses the VPS login action above.
 - Per-profile clear-session action. The original five data-store UUIDs remain unchanged, so installing an update over the existing app with the same Bundle ID preserves their logins.
 - Launches directly into the dashboard; the unstable startup Face ID gate is disabled.
 - Face ID preference uses a namespaced key so re-signing with a reused bundle ID cannot inherit another app's lock state.
