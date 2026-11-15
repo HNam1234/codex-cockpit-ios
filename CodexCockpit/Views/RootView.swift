@@ -5,6 +5,7 @@ struct RootView: View {
     @StateObject private var router = AppRouter()
     @StateObject private var store = CockpitStore()
     @StateObject private var mappings = ProfileMappingStore()
+    @StateObject private var directOAuth = DirectOAuthStore()
     @StateObject private var tiboNotifications = TiboNotificationManager()
     @StateObject private var identityScanner = WebIdentityScanner()
 
@@ -36,6 +37,7 @@ struct RootView: View {
         .environmentObject(router)
         .environmentObject(store)
         .environmentObject(mappings)
+        .environmentObject(directOAuth)
         .environmentObject(tiboNotifications)
         .onAppear {
             switch ProcessInfo.processInfo.environment["PREVIEW_TAB"] {

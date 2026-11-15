@@ -14,10 +14,25 @@ final class CockpitStore: ObservableObject {
     @Published var errorMessage: String?
 
     private let api: any CockpitAPIClient
+    private let defaults: UserDefaults
+    private let localAccountsKey = "CodexCockpit.localOAuthAccounts.v1"
+    private var remoteAccounts: [AccountSnapshot] = []
+    private var localAccounts: [LocalOAuthAccountRecord]
     private var loginTasks: [String: Task<Void, Never>] = [:]
 
-    init(api: any CockpitAPIClient = CockpitAPI.shared) {
+    init(
+        api: any CockpitAPIClient = CockpitAPI.shared,
+        defaults: UserDefaults = .standard
+    ) {
         self.api = api
+        self.defaults = defaults
+        if let data = defaults.data(forKey: localAccountsKey),
+           let decoded = try? JSONDecoder().decode([LocalOAuthAccountRecord].self, from: data) {
+            localAccounts = decoded
+        } else {
+            localAccounts = []
+        }
+        rebuildAccounts()
     }
 
     func account(id: String) -> AccountSnapshot? {
@@ -30,7 +45,8 @@ final class CockpitStore: ObservableObject {
         defer { isLoading = false }
         do {
             let response = try await api.status()
-            accounts = response.accounts
+            remoteAccounts = response.accounts
+            rebuildAccounts()
             capabilities = response.capabilities
             tiboReset = response.tiboReset
             updatedAt = response.updatedAt
@@ -45,7 +61,8 @@ final class CockpitStore: ObservableObject {
     func disconnect() {
         loginTasks.values.forEach { $0.cancel() }
         loginTasks = [:]
-        accounts = []
+        remoteAccounts = []
+        rebuildAccounts()
         capabilities = nil
         tiboReset = nil
         updatedAt = 0
@@ -56,9 +73,9 @@ final class CockpitStore: ObservableObject {
 
     func refreshAll() async {
         guard !isLoading else { return }
-        let accountIDs = accounts.map(\.id)
+        let accountIDs = remoteAccounts.map(\.id)
         guard !accountIDs.isEmpty else {
-            await load()
+            errorMessage = nil
             return
         }
 
@@ -94,6 +111,7 @@ final class CockpitStore: ObservableObject {
     }
 
     func refresh(accountID: String) async {
+        guard !Self.isLocalAccountID(accountID) else { return }
         busyAccounts.insert(accountID)
         defer { busyAccounts.remove(accountID) }
         do {
@@ -135,15 +153,45 @@ final class CockpitStore: ObservableObject {
         }
     }
 
+    @discardableResult
+    func createLocalAccount() -> AccountSnapshot {
+        let record = LocalOAuthAccountRecord(
+            id: "local:\(UUID().uuidString.lowercased())",
+            email: nil,
+            connected: false,
+            createdAt: Int(Date().timeIntervalSince1970)
+        )
+        localAccounts.append(record)
+        saveLocalAccounts()
+        rebuildAccounts()
+        return localSnapshot(record)
+    }
+
+    func completeLocalOAuth(accountID: String, email: String) {
+        guard let index = localAccounts.firstIndex(where: { $0.id == accountID }) else { return }
+        localAccounts[index].email = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        localAccounts[index].connected = true
+        saveLocalAccounts()
+        rebuildAccounts()
+    }
+
     func deleteAccount(accountID: String) async -> Bool {
         busyAccounts.insert(accountID)
         defer { busyAccounts.remove(accountID) }
+        if Self.isLocalAccountID(accountID) {
+            localAccounts.removeAll { $0.id == accountID }
+            saveLocalAccounts()
+            rebuildAccounts()
+            errorMessage = nil
+            return true
+        }
         do {
             try await api.deleteAccount(accountID: accountID)
             loginTasks[accountID]?.cancel()
             loginTasks.removeValue(forKey: accountID)
             loginSessions.removeValue(forKey: accountID)
-            accounts.removeAll { $0.id == accountID }
+            remoteAccounts.removeAll { $0.id == accountID }
+            rebuildAccounts()
             errorMessage = nil
             return true
         } catch {
@@ -192,15 +240,53 @@ final class CockpitStore: ObservableObject {
     }
 
     private func replace(_ account: AccountSnapshot) {
-        if let index = accounts.firstIndex(where: { $0.id == account.id }) {
-            accounts[index] = account
+        if let index = remoteAccounts.firstIndex(where: { $0.id == account.id }) {
+            remoteAccounts[index] = account
         } else {
-            accounts.append(account)
+            remoteAccounts.append(account)
         }
+        rebuildAccounts()
         updatedAt = max(updatedAt, account.checkedAt)
+    }
+
+    private func rebuildAccounts() {
+        accounts = remoteAccounts + localAccounts.map(localSnapshot)
+    }
+
+    private func localSnapshot(_ record: LocalOAuthAccountRecord) -> AccountSnapshot {
+        AccountSnapshot(
+            id: record.id,
+            name: record.email ?? L10n.text("oauth.direct.pending_account"),
+            displayName: record.email,
+            email: record.email,
+            plan: "DIRECT",
+            subscriptionExpiresAt: nil,
+            ok: record.connected,
+            error: nil,
+            windows: [],
+            resetCredits: 0,
+            checkedAt: record.createdAt
+        )
+    }
+
+    private func saveLocalAccounts() {
+        if let data = try? JSONEncoder().encode(localAccounts) {
+            defaults.set(data, forKey: localAccountsKey)
+        }
+    }
+
+    nonisolated static func isLocalAccountID(_ accountID: String) -> Bool {
+        accountID.hasPrefix("local:")
     }
 
     nonisolated static func clampedPollSeconds(_ seconds: Int) -> Int {
         min(3_600, max(60, seconds))
     }
+}
+
+private struct LocalOAuthAccountRecord: Codable {
+    let id: String
+    var email: String?
+    var connected: Bool
+    let createdAt: Int
 }

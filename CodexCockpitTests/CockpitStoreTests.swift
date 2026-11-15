@@ -21,6 +21,28 @@ final class CockpitStoreTests: XCTestCase {
         XCTAssertNil(store.errorMessage)
     }
 
+    func testLocalAccountUsesVerifiedEmailAndDoesNotCallServerRefresh() async throws {
+        let suiteName = "CockpitStoreTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let api = CockpitAPIStub(accounts: [])
+        let store = CockpitStore(api: api, defaults: defaults)
+
+        let pending = store.createLocalAccount()
+        XCTAssertTrue(pending.isLocalDirect)
+        XCTAssertFalse(pending.ok)
+
+        store.completeLocalOAuth(accountID: pending.id, email: "Person@Example.com")
+        let connected = try XCTUnwrap(store.account(id: pending.id))
+        XCTAssertEqual(connected.email, "person@example.com")
+        XCTAssertEqual(connected.identity, "person@example.com")
+        XCTAssertEqual(connected.health(), .healthy)
+
+        await store.refreshAll()
+        let requestedAccountIDs = await api.requestedAccountIDs()
+        XCTAssertTrue(requestedAccountIDs.isEmpty)
+    }
+
     private func account(id: String, displayName: String, remaining: Double) -> AccountSnapshot {
         AccountSnapshot(
             id: id,

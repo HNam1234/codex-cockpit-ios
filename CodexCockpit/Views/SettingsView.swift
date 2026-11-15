@@ -26,7 +26,7 @@ struct SettingsView: View {
                         LabeledContent("Kho dữ liệu", value: "Persistent")
                     }
                     settingsCard("Riêng tư", icon: "lock.shield.fill", tint: .green) {
-                        Text("Cookie nằm trong sandbox WebKit trên iPhone. App không đọc hoặc gửi cookie lên VPS.")
+                        Text("Cookie nằm trong sandbox WebKit trên iPhone. Mỗi session được quản lý hoàn toàn cục bộ.")
                             .font(.subheadline).foregroundStyle(.secondary)
                     }
                     settingsCard("TIBO", icon: "waveform.path.ecg", tint: CockpitTheme.accent) {
@@ -50,7 +50,7 @@ struct SettingsView: View {
                                 .font(.caption).foregroundStyle(.orange)
                         }
                         Divider()
-                        Text("VPS đọc tracker OpenTheRank và trạng thái công khai @thsottiaux trên X mỗi 15 phút. Tỷ lệ hôm nay là ước tính từ lịch sử + tín hiệu X; không dữ liệu tài khoản nào được gửi ra ngoài.")
+                        Text("Dịch vụ TIBO đọc tracker OpenTheRank và trạng thái công khai @thsottiaux trên X mỗi 15 phút. Tỷ lệ hôm nay là ước tính từ lịch sử + tín hiệu X.")
                             .font(.subheadline).foregroundStyle(.secondary)
                     }
                 }

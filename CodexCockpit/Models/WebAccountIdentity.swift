@@ -21,7 +21,7 @@ struct WebAccountIdentity: Codable, Equatable {
     }
 
     var label: String {
-        name ?? email ?? ""
+        email ?? name ?? ""
     }
 
     var normalizedEmail: String? {

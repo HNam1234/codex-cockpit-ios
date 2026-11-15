@@ -14,6 +14,16 @@ assert "ProfileMappingStore" in profile_source
 assert "WKWebsiteDataStore(forIdentifier:" in (root / "CodexCockpit/Services/ProfileDataStore.swift").read_text(encoding="utf-8")
 assert "auth.openai.com/codex/device" in profile_source
 assert "openDeviceLogin" in (root / "CodexCockpit/Web/BrowserState.swift").read_text(encoding="utf-8")
+direct_oauth_source = (root / "CodexCockpit/Services/DirectOAuthFlow.swift").read_text(encoding="utf-8")
+for requirement in (
+    "dynamic_agent_client",
+    "code_challenge_method",
+    "SecKeyVerifySignature",
+    "email_verified",
+    "kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly",
+):
+    assert requirement in direct_oauth_source
+assert "DirectOAuthStore" in direct_oauth_source
 api_source = (root / "CodexCockpit/Services/CockpitAPI.swift").read_text(encoding="utf-8")
 for endpoint in ("app-status", "app-auth/start", "app-auth/status", "app-reset-credit"):
     assert endpoint in api_source
@@ -76,6 +86,8 @@ assert "DeviceCodeAssistant.submit" in (root / "CodexCockpit/Web/BrowserState.sw
 accounts_source = (root / "CodexCockpit/Views/AccountsView.swift").read_text(encoding="utf-8")
 assert "Thêm account + WebKit" in accounts_source
 assert "Code từ PC" in accounts_source
+assert "startDirectOAuth" in accounts_source
+assert "createLocalAccount" in accounts_source
 assert "beginReauthorization" not in accounts_source
 assert "ProfileDataStore.clear" in accounts_source
 assert "AccountQuotaSnapshot" in accounts_source

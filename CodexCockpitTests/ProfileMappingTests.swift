@@ -28,6 +28,12 @@ final class ProfileMappingTests: XCTestCase {
         XCTAssertNil(WebAccountIdentity(name: " \n ", email: "\t"))
     }
 
+    func testVerifiedEmailIsPreferredAsTheAccountLabel() {
+        let identity = WebAccountIdentity(name: "Display Name", email: "person@example.com")
+
+        XCTAssertEqual(identity?.label, "person@example.com")
+    }
+
     func testJavaScriptIdentityPayloadParsesOnlyStringNameAndEmail() {
         let identity = WebAccountIdentity(javaScriptValue: [
             "name": "  Alice  ",

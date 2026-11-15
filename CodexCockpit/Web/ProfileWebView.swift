@@ -74,6 +74,7 @@ struct ProfileWebView: UIViewRepresentable {
 
         func stopObserving(_ webView: WKWebView) {
             state.cancelDeviceCodeFill()
+            state.clearDirectOAuth()
             state.clearCockpitOAuth()
             observations.forEach { $0.invalidate() }
             observations.removeAll()
@@ -88,7 +89,7 @@ struct ProfileWebView: UIViewRepresentable {
                 decisionHandler(.cancel)
                 return
             }
-            if state.handleCockpitOAuthNavigation(url) {
+            if state.handleDirectOAuthNavigation(url) || state.handleCockpitOAuthNavigation(url) {
                 decisionHandler(.cancel)
                 return
             }

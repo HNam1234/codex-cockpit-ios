@@ -202,7 +202,9 @@ struct AccountSnapshot: Decodable, Identifiable, Hashable, Sendable {
     let resetCredits: Int
     let checkedAt: Int
 
-    var identity: String { displayName ?? email ?? name }
+    var identity: String { email ?? displayName ?? name }
+
+    var isLocalDirect: Bool { id.hasPrefix("local:") }
 
     var subscriptionExpirationDate: Date? {
         guard let subscriptionExpiresAt, subscriptionExpiresAt > 0 else { return nil }
@@ -232,6 +234,7 @@ struct AccountSnapshot: Decodable, Identifiable, Hashable, Sendable {
     }
 
     func health(at now: Date = .now) -> AccountHealth {
+        if isLocalDirect { return ok ? .healthy : .needsLogin }
         guard ok, !windows.isEmpty else { return .needsLogin }
         if subscriptionIsExpired(at: now) { return .expired }
         if let expiration = subscriptionExpirationDate,
@@ -309,6 +312,7 @@ struct LoginSession: Decodable, Hashable {
 enum BrowserMode: String, Hashable {
     case web
     case device
+    case directOAuth
     case cockpitOAuth
 }
 
@@ -316,12 +320,22 @@ struct BrowserLaunch: Hashable {
     let mode: BrowserMode
     let code: String?
     let verificationURL: String?
+    let directOAuthAttempt: DirectOAuthAttempt?
     let cockpitOAuthAttempt: CockpitOAuthAttempt?
 
     init(mode: BrowserMode, code: String?, verificationURL: String?) {
         self.mode = mode
         self.code = code
         self.verificationURL = verificationURL
+        directOAuthAttempt = nil
+        cockpitOAuthAttempt = nil
+    }
+
+    private init(directOAuthAttempt: DirectOAuthAttempt) {
+        mode = .directOAuth
+        code = nil
+        verificationURL = nil
+        self.directOAuthAttempt = directOAuthAttempt
         cockpitOAuthAttempt = nil
     }
 
@@ -329,10 +343,15 @@ struct BrowserLaunch: Hashable {
         mode = .cockpitOAuth
         code = nil
         verificationURL = nil
+        directOAuthAttempt = nil
         self.cockpitOAuthAttempt = cockpitOAuthAttempt
     }
 
     static let web = BrowserLaunch(mode: .web, code: nil, verificationURL: nil)
+
+    static func directOAuth(_ attempt: DirectOAuthAttempt) -> BrowserLaunch {
+        BrowserLaunch(directOAuthAttempt: attempt)
+    }
 
     static func cockpitOAuth(_ attempt: CockpitOAuthAttempt) -> BrowserLaunch {
         BrowserLaunch(cockpitOAuthAttempt: attempt)
@@ -456,8 +475,8 @@ final class ProfileMappingStore: ObservableObject {
         if let identity = webIdentities[profileID] {
             return identity.label
         }
-        return Self.nonEmpty(account.displayName)
-            ?? Self.nonEmpty(account.email)
+        return Self.nonEmpty(account.email)
+            ?? Self.nonEmpty(account.displayName)
             ?? account.name
     }
 

@@ -96,6 +96,8 @@
 "Tài khoản & WebKit" = "Accounts & WebKit";
 "Mỗi account có đúng một WebKit riêng. Cookie và phiên đăng nhập không dùng chung." = "Each account has its own WebKit. Cookies and sign-in sessions are never shared.";
 "Thêm account để tạo WebKit riêng rồi nhập Device Code từ PC." = "Add an account to create its WebKit, then enter the Device Code from your PC.";
+"Chạm dấu + để tạo WebKit riêng và đăng nhập OpenAI ngay trong app." = "Tap + to create a dedicated WebKit and sign in to OpenAI inside the app.";
+"Token trong Keychain và cookie của WebKit này sẽ bị xóa khỏi iPhone." = "The Keychain token and this WebKit's cookies will be deleted from the iPhone.";
 "Mở WebKit" = "Open WebKit";
 "Code từ PC" = "Code from PC";
 "Thêm account + WebKit" = "Add account + WebKit";
@@ -123,12 +125,12 @@
 "Kho dữ liệu" = "Data storage";
 "Persistent" = "Persistent";
 "Riêng tư" = "Privacy";
-"Cookie nằm trong sandbox WebKit trên iPhone. App không đọc hoặc gửi cookie lên VPS." = "Cookies stay in the iPhone WebKit sandbox. The app does not read or send cookies to the server.";
+"Cookie nằm trong sandbox WebKit trên iPhone. Mỗi session được quản lý hoàn toàn cục bộ." = "Cookies stay in the iPhone WebKit sandbox. Every session is managed entirely on-device.";
 "Thông báo tín hiệu mạnh" = "Strong signal alerts";
 "Chỉ báo khi trạng thái mới là có khả năng hoặc đã xác nhận." = "Notify only when a new signal is likely or confirmed.";
 "Đang xin quyền thông báo…" = "Requesting notification permission…";
 "Quyền thông báo đang bị tắt trong Cài đặt iOS." = "Notifications are disabled in iOS Settings.";
-"VPS đọc tracker OpenTheRank và trạng thái công khai @thsottiaux trên X mỗi 15 phút. Tỷ lệ hôm nay là ước tính từ lịch sử + tín hiệu X; không dữ liệu tài khoản nào được gửi ra ngoài." = "The server checks OpenTheRank and public @thsottiaux activity on X every 15 minutes. Today's probability is estimated from history and X signals; no account data is shared externally.";
+"Dịch vụ TIBO đọc tracker OpenTheRank và trạng thái công khai @thsottiaux trên X mỗi 15 phút. Tỷ lệ hôm nay là ước tính từ lịch sử + tín hiệu X." = "The TIBO service checks OpenTheRank and public @thsottiaux activity on X every 15 minutes. Today's probability is estimated from history and X signals.";
 
 /* Account details and browser */
 "Không tìm thấy tài khoản" = "Account not found";
@@ -153,6 +155,29 @@
 "Mã chỉ được copy cục bộ và điền vào auth.openai.com trong WebKit đang mở." = "The code is copied locally and entered into auth.openai.com in the current WebKit.";
 "Ủy quyền thiết bị" = "Device authorization";
 "Mở OpenAI" = "Open OpenAI";
+
+/* Direct OpenAI OAuth */
+"OAuth trực tiếp" = "Direct OAuth";
+"OAuth Cockpit dự phòng" = "Cockpit OAuth fallback";
+"Đang xác minh email và lưu vào Keychain…" = "Verifying email and saving to Keychain…";
+"Đã kết nối trực tiếp" = "Connected directly";
+"Email đã xác minh này là tên account. Token chỉ lưu trong Keychain cục bộ trên iPhone." = "This verified email is the account name. Tokens stay only in the local iPhone Keychain.";
+"Tiếp tục vào ChatGPT" = "Continue to ChatGPT";
+"Quota số chưa có cho account local. WebKit và email vẫn hoạt động độc lập." = "Numeric quota is not available for this local account. Its WebKit and email still work independently.";
+"oauth.direct.pending_account" = "Waiting for verified email";
+"oauth.direct.error.invalidHostID" = "The local app identity is invalid. Reinstall or reset the app and retry.";
+"oauth.direct.error.invalidEntropy" = "Could not create a secure authorization request.";
+"oauth.direct.error.invalidCallback" = "The OpenAI callback was incomplete.";
+"oauth.direct.error.callbackMismatch" = "This callback does not belong to the current local WebKit.";
+"oauth.direct.error.stateMismatch" = "The callback security state did not match. Start Direct OAuth again.";
+"oauth.direct.error.clientMismatch" = "OpenAI returned a different app identity. Start Direct OAuth again.";
+"oauth.direct.error.authorizationDenied" = "OpenAI authorization was cancelled or denied.";
+"oauth.direct.error.tokenExchangeFailed" = "OpenAI could not finish the token exchange.";
+"oauth.direct.error.invalidTokenResponse" = "OpenAI returned an invalid token response.";
+"oauth.direct.error.invalidIDToken" = "The signed OpenAI identity could not be verified.";
+"oauth.direct.error.unverifiedEmail" = "OpenAI did not return a verified email for this account.";
+"oauth.direct.error.identityMismatch" = "This is a different OpenAI account from the one mapped to this WebKit.";
+"oauth.direct.error.keychainFailure" = "The secure credential could not be saved in Keychain.";
 
 /* Cockpit OAuth relay */
 "OAuth Cockpit" = "Cockpit OAuth";

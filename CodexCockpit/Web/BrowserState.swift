@@ -11,6 +11,8 @@ final class BrowserState: ObservableObject {
     @Published var progress = 0.0
     @Published var errorMessage: String?
     @Published private(set) var deviceCode: String?
+    @Published private(set) var directOAuthAttempt: DirectOAuthAttempt?
+    @Published private(set) var capturedDirectOAuth: DirectOAuthCapture?
     @Published private(set) var cockpitOAuthAttempt: CockpitOAuthAttempt?
     @Published private(set) var capturedCockpitOAuthCallback: CockpitOAuthCallback?
 
@@ -40,6 +42,36 @@ final class BrowserState: ObservableObject {
     func openDeviceLogin(code: String) {
         prepareDeviceCode(code)
         open(AppURLs.deviceLogin)
+    }
+
+    func prepareDirectOAuth(_ attempt: DirectOAuthAttempt) {
+        directOAuthAttempt = attempt
+        capturedDirectOAuth = nil
+        open(attempt.authorizationURL)
+    }
+
+    func handleDirectOAuthNavigation(_ url: URL) -> Bool {
+        guard let attempt = directOAuthAttempt else { return false }
+        switch DirectOAuthFlow.inspectCallback(url, for: attempt) {
+        case .notCallback:
+            return false
+        case let .captured(callback):
+            capturedDirectOAuth = DirectOAuthCapture(attempt: attempt, callback: callback)
+            directOAuthAttempt = nil
+            errorMessage = nil
+            return true
+        case let .rejected(error):
+            errorMessage = error.localizationKey
+            return true
+        }
+    }
+
+    func clearDirectOAuth() {
+        directOAuthAttempt = nil
+        capturedDirectOAuth = nil
+        if errorMessage?.hasPrefix("oauth.direct.error.") == true {
+            errorMessage = nil
+        }
     }
 
     func prepareCockpitOAuth(_ attempt: CockpitOAuthAttempt) {

@@ -9,11 +9,11 @@ SwiftUI app for iOS 17+ with a native quota dashboard and a dynamic number of pe
 - Pull down on the overview to refresh every account quota and then reload the consolidated dashboard state.
 - Compact native overview with correct remaining-quota progress bars; tap an account for full reset times and actions.
 - Shows the remaining Plus/Pro subscription days from the authenticated Codex account claim, separately from quota reset times.
-- Accounts are dynamic: create an account and its dedicated persistent WebKit together, start device-code login from the same card, or remove both from the app. Server credentials are archived on removal for recovery.
+- Accounts are dynamic: tap `+` to create a local account and its dedicated persistent WebKit together, authorize it inside the app, or remove both freely.
 - Dynamic account count and dynamic independent ChatGPT sessions backed by persistent `WKWebsiteDataStore` identifiers.
-- Account names and account-to-WebKit mappings reconcile automatically with the signed-in ChatGPT identity. Manual remapping remains available and swaps mappings without clearing cookies.
+- Verified OpenAI email is the account name everywhere. Account-to-WebKit mappings reconcile automatically with the signed-in ChatGPT identity.
 - Optional local TIBO notifications explain the public signal, avoid duplicate alerts, and never include private account data.
-- Reauthorize a revoked Codex account through the VPS device-login flow, then confirm inside the account's mapped WebKit.
+- Direct OpenAI OAuth uses dynamic client registration, PKCE, nonce/state validation, signed ID-token verification, and per-WebKit Keychain storage. Authorization always opens in the selected account's mapped WebKit.
 - Refresh usage and consume a real reset credit from the native account screen when the Codex account exposes one.
 - One global TIBO reset banner fetched by the VPS from the public OpenTheRank tracker every 15 minutes. No account data is sent to TIBO or OpenTheRank.
 - Device-code entry opens `auth.openai.com/codex/device` inside the selected profile and attempts to fill the code. The user still confirms on the official OpenAI page.
@@ -74,7 +74,7 @@ The account list is loaded dynamically and is not capped at five. Install upgrad
 
 ## Cockpit Browser OAuth relay (no VPS)
 
-Use this when the account is already signed in to its mapped WebKit and device-code authorization is inconvenient:
+Direct OAuth inside the iPhone app is now the default. Use this legacy relay only when a Cockpit PC session specifically needs to remain the OAuth client and token owner:
 
 1. Start **Browser OAuth** in Cockpit on the PC and copy the OpenAI authorization URL it creates.
 2. On the iPhone, open the matching account and choose **OAuth**. Confirm the displayed WebKit and mapped identity, then paste the URL.
@@ -87,7 +87,7 @@ Never share an authorization or callback URL: it is short-lived authentication m
 
 ## Current validation boundary
 
-The macOS CI workflow builds the IPA and runs the Xcode unit/UI tests. Device-login and Cockpit Browser OAuth confirmation still happen on the official OpenAI page; third-party SSO providers may choose to redirect outside embedded web views.
+The macOS CI workflow builds the IPA and runs the Xcode unit/UI tests. Direct OAuth and device-login confirmation still happen on the official OpenAI page; third-party SSO providers may choose to redirect outside embedded web views. OpenAI's public direct-token flow does not expose ChatGPT's numeric 5-hour/weekly quota API, so numeric quota remains available only for existing dashboard-backed accounts.
 
 ## Personalized IPA
 

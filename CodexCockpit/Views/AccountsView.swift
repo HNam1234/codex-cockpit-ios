@@ -5,13 +5,10 @@ struct AccountsView: View {
     @EnvironmentObject private var store: CockpitStore
     @EnvironmentObject private var mappings: ProfileMappingStore
     @EnvironmentObject private var router: AppRouter
-    @State private var showingAddAccount = false
+    @EnvironmentObject private var directOAuth: DirectOAuthStore
     @State private var pendingDelete: AccountSnapshot?
     @State private var authorizationAccount: AccountSnapshot?
-    @State private var cockpitOAuthEntry: CockpitOAuthEntryContext?
-    @State private var previewOAuthCallback: CockpitOAuthCallback?
     @State private var didPresentDevicePreview = false
-    @State private var didPresentOAuthPreview = false
 
     var body: some View {
         ZStack {
@@ -35,7 +32,7 @@ struct AccountsView: View {
         .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button { showingAddAccount = true } label: {
+                Button { createAndOpenAccount() } label: {
                     ZStack {
                         Circle().fill(.thinMaterial).frame(width: 36, height: 36)
                         Image(systemName: "plus").font(.subheadline.weight(.bold))
@@ -43,12 +40,6 @@ struct AccountsView: View {
                 }
                 .accessibilityLabel("Thêm tài khoản")
             }
-        }
-        .sheet(isPresented: $showingAddAccount) {
-            NewAccountSheet(isCreating: store.isCreatingAccount) { name in
-                Task { await createAndOpenAccount(name: name) }
-            }
-            .presentationDetents([.medium])
         }
         .sheet(item: $authorizationAccount) { account in
             PCDeviceCodeSheet(
@@ -68,27 +59,6 @@ struct AccountsView: View {
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         }
-        .sheet(item: $cockpitOAuthEntry) { context in
-            CockpitOAuthEntrySheet(
-                accountName: context.accountName,
-                identity: context.identity
-            ) { attempt in
-                router.openBrowser(
-                    accountID: context.accountID,
-                    launch: .cockpitOAuth(attempt)
-                )
-            }
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
-        }
-        .sheet(item: $previewOAuthCallback) { callback in
-            CockpitOAuthResultSheet(callback: callback) {
-                clearClipboardIfMatching(callback)
-                previewOAuthCallback = nil
-            }
-            .presentationDetents([.medium, .large])
-            .presentationDragIndicator(.visible)
-        }
         .onChange(of: store.accounts, initial: true) { _, accounts in
             guard ProcessInfo.processInfo.environment["PREVIEW_DEVICE_SHEET"] == "1",
                   !didPresentDevicePreview,
@@ -96,7 +66,6 @@ struct AccountsView: View {
             didPresentDevicePreview = true
             authorizationAccount = account
         }
-        .onAppear { presentOAuthPreviewIfNeeded() }
         .confirmationDialog(
             L10n.format(
                 "accounts.delete_confirmation",
@@ -116,7 +85,7 @@ struct AccountsView: View {
             }
             Button("Hủy", role: .cancel) { pendingDelete = nil }
         } message: {
-            Text("Credential trên VPS sẽ được archive để có thể khôi phục. Cookie WebKit trên iPhone sẽ bị xóa.")
+            Text("Token trong Keychain và cookie của WebKit này sẽ bị xóa khỏi iPhone.")
         }
         .alert("Không thể hoàn tất", isPresented: errorBinding) {
             Button("OK") { store.errorMessage = nil }
@@ -140,7 +109,7 @@ struct AccountsView: View {
         ContentUnavailableView {
             Label("Chưa có tài khoản", systemImage: "person.crop.circle.badge.plus")
         } description: {
-            Text("Thêm account để tạo WebKit riêng rồi nhập Device Code từ PC.")
+            Text("Chạm dấu + để tạo WebKit riêng và đăng nhập OpenAI ngay trong app.")
         }
         .frame(maxWidth: .infinity).padding(.vertical, 30).glassCard()
     }
@@ -175,6 +144,10 @@ struct AccountsView: View {
                     } else if account.ok, !account.windows.isEmpty {
                         AccountQuotaSnapshot(windows: Array(account.windows.prefix(2)))
                             .frame(width: 105)
+                    } else if account.ok, account.isLocalDirect {
+                        Image(systemName: "checkmark.shield.fill")
+                            .font(.title3)
+                            .foregroundStyle(.green)
                     } else {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundStyle(.red)
@@ -194,7 +167,7 @@ struct AccountsView: View {
                 .buttonStyle(CompactAccountActionStyle(tint: .blue))
                 .accessibilityLabel(L10n.text("oauth.relay.action.web"))
 
-                Button { openCockpitOAuth(for: account) } label: {
+                Button { startDirectOAuth(for: account) } label: {
                     Label("OAuth", systemImage: "link")
                 }
                 .buttonStyle(CompactAccountActionStyle(tint: CockpitTheme.accent))
@@ -220,7 +193,7 @@ struct AccountsView: View {
     }
 
     private var addAccountButton: some View {
-        Button { showingAddAccount = true } label: {
+        Button { createAndOpenAccount() } label: {
             Label("Thêm account + WebKit", systemImage: "plus.circle.fill")
                 .font(.subheadline.weight(.bold)).frame(maxWidth: .infinity).padding(.vertical, 13)
         }
@@ -228,52 +201,28 @@ struct AccountsView: View {
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
-    private func createAndOpenAccount(name: String) async {
-        guard let account = await store.createAccount(name: name) else { return }
+    private func createAndOpenAccount() {
+        let account = store.createLocalAccount()
         mappings.createDedicatedProfile(for: account.id)
-        showingAddAccount = false
-        try? await Task.sleep(for: .milliseconds(350))
-        authorizationAccount = account
+        startDirectOAuth(for: account)
     }
 
     private func delete(_ account: AccountSnapshot) async {
         let profile = mappings.profile(for: account.id)
         guard await store.deleteAccount(accountID: account.id) else { return }
+        try? directOAuth.clear(profileID: profile.id)
         mappings.removeAccount(account.id)
         try? await ProfileDataStore.clear(identifier: profile.dataStoreIdentifier)
     }
 
-    private func openCockpitOAuth(for account: AccountSnapshot) {
-        let profile = mappings.profile(for: account.id)
-        cockpitOAuthEntry = CockpitOAuthEntryContext(
-            accountID: account.id,
-            accountName: profile.name,
-            identity: mappings.webIdentities[profile.id]?.label ?? mappings.displayIdentity(for: account)
-        )
-    }
-
-    private func presentOAuthPreviewIfNeeded() {
-        guard !didPresentOAuthPreview else { return }
-        let environment = ProcessInfo.processInfo.environment
-        if environment["PREVIEW_COCKPIT_OAUTH_ENTRY"] == "1" {
-            didPresentOAuthPreview = true
-            cockpitOAuthEntry = CockpitOAuthEntryContext(
-                accountID: "preview",
-                accountName: "Codex 1",
-                identity: "preview@example.com"
-            )
-        } else if environment["PREVIEW_COCKPIT_OAUTH_RESULT"] == "1",
-                  let url = URL(
-                    string: "http://localhost:1455/auth/callback?code=preview-code&state=preview-state"
-                  ) {
-            didPresentOAuthPreview = true
-            previewOAuthCallback = CockpitOAuthCallback(url: url)
+    private func startDirectOAuth(for account: AccountSnapshot) {
+        let profile = mappings.createDedicatedProfile(for: account.id)
+        do {
+            let attempt = try directOAuth.prepare(profileID: profile.id)
+            router.openBrowser(accountID: account.id, launch: .directOAuth(attempt))
+        } catch {
+            store.errorMessage = error.localizedDescription
         }
-    }
-
-    private func clearClipboardIfMatching(_ callback: CockpitOAuthCallback) {
-        guard UIPasteboard.general.string == callback.url.absoluteString else { return }
-        UIPasteboard.general.items = []
     }
 
     private var errorBinding: Binding<Bool> {
@@ -284,56 +233,6 @@ struct AccountsView: View {
         ProcessInfo.processInfo.environment["PREVIEW_DEVICE_SHEET"] == "1"
             ? "ABCD-EFGH"
             : nil
-    }
-}
-
-private struct CockpitOAuthEntryContext: Identifiable {
-    let accountID: String
-    let accountName: String
-    let identity: String?
-
-    var id: String { accountID }
-}
-
-private struct NewAccountSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    @State private var name = ""
-    let isCreating: Bool
-    let onCreate: (String) -> Void
-
-    var body: some View {
-        NavigationStack {
-            VStack(alignment: .leading, spacing: 18) {
-                Label("Account mới sẽ có một WebKit và cookie store riêng.", systemImage: "square.stack.3d.up.fill")
-                    .font(.subheadline).foregroundStyle(.secondary)
-                TextField("Tên gợi nhớ (không bắt buộc)", text: $name)
-                    .textInputAutocapitalization(.words)
-                    .padding(13)
-                    .background(.secondary.opacity(0.1), in: RoundedRectangle(cornerRadius: 13))
-                Button {
-                    onCreate(name.trimmingCharacters(in: .whitespacesAndNewlines))
-                } label: {
-                    HStack {
-                        if isCreating { ProgressView().tint(.white) }
-                        Label("Tạo và nhập code PC", systemImage: "key.horizontal.fill")
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(CapsuleActionStyle(tint: CockpitTheme.accent))
-                .disabled(isCreating)
-                Text("Sau khi tạo, nhập Device Code đang hiện trên PC. App sẽ mở đúng WebKit và tự điền mã cục bộ.")
-                    .font(.caption).foregroundStyle(.secondary)
-                Spacer()
-            }
-            .padding(20)
-            .navigationTitle("Thêm tài khoản")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Đóng") { dismiss() }.disabled(isCreating)
-                }
-            }
-        }
     }
 }
 

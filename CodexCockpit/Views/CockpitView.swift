@@ -192,7 +192,10 @@ struct AccountOverviewCard: View {
             )
             VStack(alignment: .leading, spacing: 3) {
                 Text(displayIdentity).font(.subheadline.weight(.bold)).lineLimit(1)
-                Text([account.name, account.plan?.uppercased()].compactMap { $0 }.joined(separator: " · "))
+                Text((account.isLocalDirect
+                      ? [account.plan?.uppercased()]
+                      : [account.name, account.plan?.uppercased()])
+                    .compactMap { $0 }.joined(separator: " · "))
                     .font(.caption2.weight(.medium)).foregroundStyle(.secondary).lineLimit(1)
                 if let remaining = account.subscriptionRemainingText() {
                     Label(remaining, systemImage: "calendar.badge.clock")
@@ -203,11 +206,15 @@ struct AccountOverviewCard: View {
             }
             .frame(maxWidth: 112, alignment: .leading)
             Spacer(minLength: 2)
-            if account.ok {
+            if account.ok, !account.windows.isEmpty {
                 VStack(spacing: 6) {
                     ForEach(account.windows.prefix(2)) { window in MiniQuotaRow(window: window) }
                 }
                 .frame(width: 132)
+            } else if account.ok, account.isLocalDirect {
+                Label("LOCAL", systemImage: "checkmark.shield.fill")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(.green)
             } else {
                 Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.red)
             }
