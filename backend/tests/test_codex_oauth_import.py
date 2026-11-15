@@ -8,6 +8,7 @@ import unittest
 from backend.codex_oauth_import import (
     OAuthImportError,
     build_auth_document,
+    import_oauth_credentials,
     install_and_verify,
 )
 
@@ -44,6 +45,28 @@ def token_pair(*, account_id: str = "acct-123", subject: str = "user-123", clien
 
 
 class OAuthImportTests(unittest.TestCase):
+    def test_high_level_import_returns_verified_snapshot_and_identity(self):
+        client_id, identity, access = token_pair()
+        with tempfile.TemporaryDirectory() as directory:
+            auth_path = Path(directory) / "auth.json"
+
+            snapshot, imported = import_oauth_credentials(
+                auth_path=auth_path,
+                client_id=client_id,
+                id_token=identity,
+                access_token=access,
+                refresh_token="refresh-token-value",
+                snapshot_reader=lambda: {
+                    "ok": True,
+                    "email": "person@example.com",
+                    "windows": [{"remaining_percent": 88}],
+                },
+            )
+
+            self.assertEqual(imported.account_id, "acct-123")
+            self.assertEqual(snapshot["windows"][0]["remaining_percent"], 88)
+            self.assertTrue(auth_path.is_file())
+
     def test_builds_codex_auth_for_matching_identity(self):
         client_id, identity, access = token_pair()
 

@@ -184,3 +184,23 @@ def install_and_verify(
         else:
             _atomic_write(auth_path, previous, previous_mode)
         raise
+
+
+def import_oauth_credentials(
+    *,
+    auth_path: Path,
+    client_id: str,
+    id_token: str,
+    access_token: str,
+    refresh_token: str,
+    snapshot_reader: Callable[[], dict[str, Any]],
+) -> tuple[dict[str, Any], ImportedIdentity]:
+    """Validate, install, and live-check one completed OAuth login."""
+
+    document, identity = build_auth_document(
+        client_id,
+        id_token,
+        access_token,
+        refresh_token,
+    )
+    return install_and_verify(auth_path, document, snapshot_reader), identity

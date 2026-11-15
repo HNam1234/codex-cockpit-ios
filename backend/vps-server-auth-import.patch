@@ -1,0 +1,60 @@
+--- server.py
++++ server.py
+@@
+ from urllib.parse import parse_qs, quote, urlparse
++from codex_oauth_import import import_oauth_credentials
+@@
+         self.cancelled_accounts: set[str] = set()
++        self.account_locks: dict[str, threading.Lock] = {}
+@@
+     def refresh_account(self, account_id: str) -> dict[str, Any]:
+         config, account = self._config_and_account(account_id)
+         with self._client(config, account) as client:
+             raw = client.snapshot()
+         return safe_snapshot(account, self.watch.normalize_snapshot(account, raw))
++
++    def import_oauth(self, account_id, client_id, id_token, access_token, refresh_token):
++        config, account = self._config_and_account(account_id)
++        account_id = str(account["id"])
++        with self.lock:
++            account_lock = self.account_locks.setdefault(account_id, threading.Lock())
++        with account_lock:
++            def snapshot_reader():
++                with self._client(config, account) as client:
++                    raw = client.snapshot()
++                return safe_snapshot(account, self.watch.normalize_snapshot(account, raw))
++            snapshot, _ = import_oauth_credentials(
++                auth_path=Path(str(account["codex_home"])) / "auth.json",
++                client_id=client_id,
++                id_token=id_token,
++                access_token=access_token,
++                refresh_token=refresh_token,
++                snapshot_reader=snapshot_reader,
++            )
++            state_path = Path(config.get("state_path") or "/var/lib/codex-usage-bot/state.json")
++            with self.lock:
++                state = read_json(state_path, {"accounts": {}, "muted_until": 0})
++                accounts = state.setdefault("accounts", {})
++                if not isinstance(accounts, dict):
++                    accounts = {}
++                    state["accounts"] = accounts
++                accounts[account_id] = snapshot
++                save_json_atomic(state_path, state)
++            return snapshot
+@@
+-        if length <= 0 or length > 16 * 1024:
++        if length <= 0 or length > 32 * 1024:
+@@
+             "/app-auth/status",
++            "/app-auth/import",
+@@
++            if path == "/app-auth/import":
++                account = self.app.bridge.import_oauth(
++                    self.form_value(form, "account_id"),
++                    self.form_value(form, "client_id"),
++                    self.form_value(form, "id_token"),
++                    self.form_value(form, "access_token"),
++                    self.form_value(form, "refresh_token"),
++                )
++                self.send_json(HTTPStatus.OK, {"ok": True, "account": account})
++                return
