@@ -77,14 +77,16 @@ final class BrowserState: ObservableObject {
     func goForward() { webView?.goForward() }
     func reload() { webView?.reload() }
 
-    func attach(_ webView: WKWebView, initialRequest: URLRequest) {
+    func attach(_ webView: WKWebView, initialRequest: URLRequest? = nil) {
         self.webView = webView
         if let pendingRequest {
             open(pendingRequest)
-        } else {
+            self.pendingRequest = nil
+        } else if webView.url == nil, let initialRequest {
             open(initialRequest)
         }
-        pendingRequest = nil
+        update(from: webView)
+        fillPendingDeviceCodeIfPossible()
     }
 
     func update(from webView: WKWebView) {

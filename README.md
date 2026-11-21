@@ -19,7 +19,7 @@ SwiftUI app for iOS 17+ with a native quota dashboard and a dynamic number of pe
 - Per-profile clear-session action. The original five data-store UUIDs remain unchanged, so installing an update over the existing app with the same Bundle ID preserves their logins.
 - Launches directly into the dashboard; the unstable startup Face ID gate is disabled.
 - Face ID preference uses a namespaced key so re-signing with a reused bundle ID cannot inherit another app's lock state.
-- Only one profile WebView is alive while its screen is open.
+- Up to two profile WebViews stay warm in an LRU pool for instant device-login entry while preserving each profile's isolated persistent session.
 
 ## Generate and run
 

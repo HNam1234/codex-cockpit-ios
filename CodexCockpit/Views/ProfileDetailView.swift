@@ -212,17 +212,33 @@ struct AccountBrowserView: View {
     let profileBinding: BrowserProfileBinding
     @EnvironmentObject private var store: CockpitStore
     @EnvironmentObject private var mappings: ProfileMappingStore
-    @StateObject private var browser = BrowserState()
+    @ObservedObject private var browser: BrowserState
     @State private var showingCodeEntry = false
     @State private var showingClear = false
     @State private var webViewGeneration = UUID()
+
+    @MainActor
+    init(
+        accountID: String,
+        launch: BrowserLaunch,
+        profileBinding: BrowserProfileBinding
+    ) {
+        self.accountID = accountID
+        self.launch = launch
+        self.profileBinding = profileBinding
+        _browser = ObservedObject(
+            wrappedValue: WebViewPool.shared.browserState(
+                for: WebProfile(id: profileBinding.profileID)
+            )
+        )
+    }
 
     var body: some View {
         let profile = profileBinding.profile(in: mappings)
         VStack(spacing: 0) {
             ZStack(alignment: .top) {
                 ProfileWebView(
-                    dataStoreIdentifier: profile.dataStoreIdentifier,
+                    profile: profile,
                     initialRequest: URLRequest(url: initialURL),
                     state: browser,
                     onIdentityDetected: { identity in
@@ -243,7 +259,7 @@ struct AccountBrowserView: View {
                 Spacer()
                 Button { browser.reload() } label: { Image(systemName: "arrow.clockwise") }
                 Spacer()
-                Button { showingCodeEntry = true } label: { Image(systemName: "key.horizontal") }
+                Button { presentCodeEntry(for: profile) } label: { Image(systemName: "key.horizontal") }
             }
             .padding(.horizontal, 20).padding(.vertical, 11).background(.bar)
         }
@@ -253,12 +269,13 @@ struct AccountBrowserView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button("ChatGPT") { browser.open(AppURLs.chatGPT) }
-                    Button("Nhập device code") { showingCodeEntry = true }
+                    Button("Nhập device code") { presentCodeEntry(for: profile) }
                     Button("Xóa session", role: .destructive) { showingClear = true }
                 } label: { Image(systemName: "ellipsis.circle") }
             }
         }
         .onAppear {
+            WebViewPool.shared.setVisible(true, profileID: profile.id)
             if let code = launch.code {
                 let normalized = DeviceCode.normalize(code)
                 browser.pendingDeviceCode = normalized
@@ -266,6 +283,9 @@ struct AccountBrowserView: View {
                     UIPasteboard.general.string = normalized
                 }
             }
+        }
+        .onDisappear {
+            WebViewPool.shared.setVisible(false, profileID: profile.id)
         }
         .sheet(isPresented: $showingCodeEntry) {
             DeviceCodeSheet { code in
@@ -278,8 +298,7 @@ struct AccountBrowserView: View {
         .confirmationDialog("Xóa cookie và session của \(profile.name)?", isPresented: $showingClear) {
             Button("Xóa profile", role: .destructive) {
                 Task {
-                    browser.webView?.stopLoading()
-                    browser.webView = nil
+                    WebViewPool.shared.evict(profileID: profile.id)
                     try? await ProfileDataStore.clear(identifier: profile.dataStoreIdentifier)
                     mappings.clearIdentity(for: profile.id)
                     webViewGeneration = UUID()
@@ -291,6 +310,11 @@ struct AccountBrowserView: View {
     private var initialURL: URL {
         if let value = launch.verificationURL, let url = URL(string: value) { return url }
         return launch.mode == .device ? AppURLs.deviceLogin : AppURLs.chatGPT
+    }
+
+    private func presentCodeEntry(for profile: WebProfile) {
+        WebViewPool.shared.prewarm(profile: profile)
+        showingCodeEntry = true
     }
 
     @ViewBuilder

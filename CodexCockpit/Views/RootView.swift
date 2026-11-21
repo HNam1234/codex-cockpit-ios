@@ -45,6 +45,7 @@ struct RootView: View {
                   credentials.isConfigured else { return }
             await store.load()
             mappings.synchronize(accounts: store.accounts)
+            prewarmDeviceProfile()
             await identityScanner.scan(profiles: mappings.profiles) { profileID, identity in
                 mappings.record(identity: identity, for: profileID, accounts: store.accounts)
             }
@@ -59,6 +60,7 @@ struct RootView: View {
         }
         .onChange(of: store.accounts) { _, _ in
             mappings.synchronize(accounts: store.accounts)
+            prewarmDeviceProfile()
         }
         .onChange(of: store.tiboReset) { _, signal in
             tiboNotifications.process(signal)
@@ -77,5 +79,25 @@ struct RootView: View {
                 profileBinding: BrowserProfileBinding(accountID: accountID, mappings: mappings)
             )
         }
+    }
+
+    @MainActor
+    private func prewarmDeviceProfile() {
+        guard !store.accounts.isEmpty else { return }
+
+        let defaults = UserDefaults.standard
+        let lastProfileKey = "CodexCockpit.lastDeviceProfile.v1"
+        let profile: WebProfile
+        if let profileID = defaults.string(forKey: lastProfileKey),
+           mappings.profiles.contains(where: { $0.id == profileID }) {
+            profile = mappings.profile(id: profileID)
+        } else if let account = (
+            store.accounts.first(where: { !$0.ok || $0.error != nil }) ?? store.accounts.first
+        ) {
+            profile = mappings.profile(for: account.id)
+        } else {
+            return
+        }
+        WebViewPool.shared.prewarm(profile: profile)
     }
 }

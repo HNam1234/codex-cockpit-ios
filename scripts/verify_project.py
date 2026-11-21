@@ -35,6 +35,13 @@ for forbidden_web_read in ("document.cookie", "localStorage", "sessionStorage"):
 autofill_source = (root / "CodexCockpit/Web/DeviceCodeAutofill.swift").read_text(encoding="utf-8")
 assert "webView.evaluateJavaScript(script, in: nil, in: .defaultClient)" in autofill_source
 
+pool_source = (root / "CodexCockpit/Web/WebViewPool.swift").read_text(encoding="utf-8")
+assert "private let capacity = 2" in pool_source
+assert "UIApplication.didReceiveMemoryWarningNotification" in pool_source
+assert "WebViewPool.shared.evict(profileID:" in (
+    root / "CodexCockpit/Views/ProfileDetailView.swift"
+).read_text(encoding="utf-8")
+
 notification_source = (root / "CodexCockpit/Services/TiboNotificationManager.swift").read_text(encoding="utf-8")
 assert "requestAuthorization" in notification_source
 assert "historyKey" in notification_source
