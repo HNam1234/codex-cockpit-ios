@@ -44,15 +44,17 @@ App SwiftUI (iOS 17+, XcodeGen `project.yml`) gồm dashboard quota native + nhi
   ```
   Lệnh in ra mã một lần + link `github.com/login/device`. **Báo mã cho chủ repo** để họ xác nhận trên trình duyệt, chờ họ xác nhận rồi làm tiếp.
 - **Không** tự nhập mật khẩu/token vào đâu cả. Không ghi token vào file, không commit token.
-- Được dùng `gh` cho: `run list/watch/view/rerun`, `workflow run`, `run download` (tải IPA).
+- Được dùng `gh` cho: `run list/watch/view/rerun`, `run download` (tải IPA unsigned).
 - **Không** sửa settings repo, secrets, variables, branch protection, collaborators, webhooks, Actions permissions.
 
 ### 2.3 CI
 - `Build unsigned IPA` (`.github/workflows/build-unsigned-ipa.yml`) **tự chạy khi push `main`**: XcodeGen → unit + UI test trên simulator → build IPA.
-- `Build signed IPA` chỉ chạy tay. Được phép chạy ở cuối mỗi MỐC:
+- Khi CI unsigned xanh, tải artifact về máy ở cuối mỗi MỐC:
   ```bash
-  gh workflow run build-signed-ipa.yml -R HNam1234/codex-cockpit-ios -f export_method=ad-hoc
+  gh run download <run-id> -R HNam1234/codex-cockpit-ios \
+    -n CodexCockpit-unsigned -D work/ipa/<mốc>
   ```
+- Báo đường dẫn file `.ipa` và link run cho chủ repo. Chủ repo tự ký IPA bằng **ESign** trên iPhone; không dùng workflow ký, không yêu cầu hoặc lưu GitHub secrets ký.
 - Theo dõi:
   ```bash
   gh run list -R HNam1234/codex-cockpit-ios -L 5
@@ -80,6 +82,7 @@ App SwiftUI (iOS 17+, XcodeGen `project.yml`) gồm dashboard quota native + nhi
 5. File Swift mới trong `CodexCockpit/` tự vào target. Key Info.plist dùng `INFOPLIST_KEY_*`. Riêng `CFBundleURLTypes` dùng khối `info:` trong `project.yml`.
 6. UI tiếng Việt, dùng design system sẵn có (`DesignSystem.swift`: `glassCard`, `CockpitTheme`, `SectionHeading`, `CapsuleActionStyle`, `ProfileArtwork`).
 7. Tái sử dụng code đã có, không viết lại: `WebIdentityScanner`/`WebIdentityBridge` (nhận diện tài khoản), `CockpitCredentialStore` (pattern Keychain), `store.refreshAll()` + refresh theo `scenePhase` trong `RootView`, `CockpitStore.startPolling`.
+8. Không thêm entitlement cần provisioning đặc biệt (App Groups, Associated Domains, Push Notifications...). URL scheme, Quick Action, AppIntents, Keychain và Face ID không cần entitlement riêng và vẫn dùng được sau khi chủ repo ký lại bằng ESign.
 
 ---
 
@@ -91,7 +94,7 @@ App SwiftUI (iOS 17+, XcodeGen `project.yml`) gồm dashboard quota native + nhi
 | 2 | `DeviceCodeAutofill` (user script, MutationObserver, OTP nhiều ô) | ✅ `674c687`, `16f64c9` |
 | 3 | `WebViewPool` giữ ấm 2 WebView | ✅ `d84f470`, **có lỗi → Bước 0** |
 | **0** | **Sửa lỗi pool** | ⏳ làm ngay |
-| — | **MỐC 1**: push main, CI xanh, signed IPA, chủ repo thử trên iPhone | |
+| — | **MỐC 1**: push main, CI unsigned xanh, tải IPA → chủ repo ký ESign và thử trên iPhone | |
 | 4 | Lối vào nhanh: nút nổi, Quick Action, URL scheme, App Shortcut, chip clipboard | |
 | 5 | `DeviceCodeSheet` mới | |
 | 6 | "Ủy quyền lại" song song + banner + tự quay về | |
@@ -130,10 +133,12 @@ App SwiftUI (iOS 17+, XcodeGen `project.yml`) gồm dashboard quota native + nhi
 6. Commit: `fix: honor requested page when reusing pooled webviews`.
 
 ### MỐC 1
-Push main (mục 2.1). Đây là **lần build đầu tiên** của 7 commit, nhiều khả năng có lỗi compile, sửa đến khi xanh. Chạy signed IPA. Báo chủ repo thử trên iPhone:
+Push main (mục 2.1). Đây là **lần build đầu tiên** của 7 commit, nhiều khả năng có lỗi compile, sửa đến khi xanh. Tải artifact unsigned theo mục 2.3, báo đường dẫn để chủ repo ký bằng ESign rồi thử trên iPhone:
 - (a) Account → "Ủy quyền lại" → trang OpenAI mở → code tự điền, chip "Đã điền code ✓".
 - (b) "Mở Web" → ChatGPT; quay lại → "Ủy quyền lại" → vẫn ra trang device.
 - (c) Ra vào màn web nhiều lần không bị tải lại trang.
+
+MỐC 1 chỉ hoàn tất khi chủ repo xác nhận đã cài bản ký bằng ESign và checklist trên đều đạt. Không bắt đầu Task 4 trước xác nhận đó.
 
 ---
 
@@ -192,7 +197,7 @@ Commit: `feat: run reauthorization in parallel with the device page`.
 Commit: `feat: add device code settings`.
 
 ### MỐC 2
-Push main, CI xanh, signed IPA. Chủ repo thử: Quick Action, `codexcockpit://device?code=TEST-12345` từ Notes/Safari, nút nổi, dán code, "Ủy quyền lại" (mở ngay, tự điền, tự quay về).
+Push main, CI unsigned xanh, tải IPA → chủ repo ký bằng ESign. Chủ repo thử: Quick Action, `codexcockpit://device?code=TEST-12345` từ Notes/Safari, nút nổi, dán code, "Ủy quyền lại" (mở ngay, tự điền, tự quay về).
 
 ---
 
@@ -226,7 +231,7 @@ File `CodexCockpit/Services/CredentialVault.swift`, theo pattern `CockpitCredent
 - Commit: `feat: autofill saved chatgpt credentials on openai login`.
 
 ### MỐC 3
-Push main, CI xanh, signed IPA. Chủ repo thử: lưu tài khoản cho 1 profile → "Xoá session" profile đó → mở Web → email tự điền → Continue → Face ID → mật khẩu tự điền.
+Push main, CI unsigned xanh, tải IPA → chủ repo ký bằng ESign. Chủ repo thử: lưu tài khoản cho 1 profile → "Xoá session" profile đó → mở Web → email tự điền → Continue → Face ID → mật khẩu tự điền.
 
 ---
 
@@ -261,7 +266,7 @@ Push main, CI xanh, signed IPA. Chủ repo thử: lưu tài khoản cho 1 profil
 - Commit: `test: cover fast device code flow` và `chore: release 1.4.0`.
 
 ### MỐC 4
-Push main, CI xanh, signed IPA, báo chủ repo bản 1.4.0.
+Push main, CI unsigned xanh, tải IPA và báo chủ repo ký bản 1.4.0 bằng ESign.
 
 ### Task 11: Server VPS (⛔ chỉ khi chủ repo cho phép)
 - Backup: `cp /opt/codex-cockpit/server.py /opt/codex-cockpit/server.py.bak-$(date +%Y%m%d-%H%M%S)`.
@@ -278,7 +283,8 @@ MỐC n: <tên>
 - Commits: <hash> <message> (liệt kê)
 - Push: main = <hash>
 - CI unsigned: <link run> → ✅/❌ (số lần sửa)
-- Signed IPA: <link run> → ✅/❌
+- Unsigned IPA: <đường dẫn local> → chủ repo ký bằng ESign
+- ESign / iPhone: ⏳ chờ chủ repo / ✅ đã xác nhận
 - Chủ repo cần thử trên iPhone: <danh sách bước>
 - Rủi ro / việc còn treo: <...>
 ```

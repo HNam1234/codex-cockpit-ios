@@ -33,32 +33,13 @@ open CodexCockpit.xcodeproj
 
 In Xcode, select the `CodexCockpit` target, choose your Apple Developer Team, connect the registered iPhone, and Run. The bundle ID defaults to `vn.nam.CodexCockpit`; change it if the developer account already uses that identifier.
 
-## Export a signed IPA
+## Unsigned IPA and ESign
 
-Register the iPhone UDID in the Apple Developer account, create/refresh a Development or Ad Hoc provisioning profile, archive the app in Xcode, then choose **Distribute App** and export for the registered device. Developer Mode must be enabled on the iPhone.
+The GitHub workflow builds and tests an **unsigned** IPA. Download the `CodexCockpit-unsigned` artifact from a successful `Build unsigned IPA` run, then sign it on the iPhone with ESign and the repository owner's provisioning profile.
 
-Do not send Apple passwords, signing private keys, `.p12` passwords, or App Store Connect private keys in chat. Keep signing assets in Xcode Keychain or a private CI secret store.
+Keep the bundle ID `vn.nam.CodexCockpit` and install over the existing app to preserve its WebKit data. The project intentionally avoids entitlements that require special provisioning, such as App Groups, Associated Domains, and Push Notifications.
 
-If Xcode is already signed into the paid Apple Developer account, the included script generates a development-signed IPA:
-
-```bash
-DEVELOPMENT_TEAM=YOUR_TEAM_ID ./scripts/build_signed_ipa.sh
-```
-
-The iPhone UDID must belong to the provisioning profile. For installation, use Xcode Devices and Simulators, Apple Configurator, or the Apple Devices workflow approved for the profile.
-
-### Signed CI option (no Mac required locally)
-
-The `build-signed-ipa.yml` workflow builds on a macOS GitHub runner. Add these GitHub Actions secrets; never commit the values or expose them to pull-request code:
-
-- `APPLE_TEAM_ID`
-- `APPLE_SIGNING_IDENTITY` (`Apple Distribution` for Ad Hoc, or `Apple Development`)
-- `APPLE_CERTIFICATE_P12_BASE64`
-- `APPLE_CERTIFICATE_PASSWORD`
-- `APPLE_PROVISIONING_PROFILE_BASE64`
-- `CI_KEYCHAIN_PASSWORD`
-
-Optionally set repository variable `IOS_BUNDLE_ID`. The provisioning profile must match that bundle ID and include the target iPhone UDID for Ad Hoc/development installation.
+Do not send Apple passwords, certificates, provisioning profiles, signing keys, or ESign credentials in chat or commit them to the repository.
 
 ## Native dashboard authentication
 
