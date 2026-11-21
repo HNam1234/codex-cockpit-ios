@@ -10,10 +10,17 @@ final class BrowserState: ObservableObject {
     @Published var isLoading = false
     @Published var progress = 0.0
     @Published var errorMessage: String?
+    @Published var autofillStatus: AutofillStatus = .idle
 
     weak var webView: WKWebView?
     var pendingRequest: URLRequest?
-    var pendingDeviceCode: String?
+    var pendingDeviceCode: String? {
+        didSet {
+            guard pendingDeviceCode != nil else { return }
+            autofillStatus = .waiting
+            fillPendingDeviceCodeIfPossible()
+        }
+    }
 
     func open(_ url: URL) {
         errorMessage = nil
@@ -36,7 +43,33 @@ final class BrowserState: ObservableObject {
     func openDeviceLogin(code: String) {
         let normalized = DeviceCode.normalize(code)
         pendingDeviceCode = normalized.isEmpty ? nil : normalized
+        if DeviceCodeAutofill.supports(webView?.url) { return }
         open(AppURLs.deviceLogin)
+    }
+
+    func fillPendingDeviceCodeIfPossible() {
+        guard let code = pendingDeviceCode,
+              let webView,
+              webView.isLoading == false,
+              DeviceCodeAutofill.supports(webView.url) else { return }
+
+        autofillStatus = .waiting
+        DeviceCodeAutofill.fill(code: code, in: webView) { [weak self] started in
+            guard let self, !started, self.pendingDeviceCode != nil else { return }
+            self.autofillStatus = .notFound
+        }
+    }
+
+    func handleAutofillMessage(type: String) {
+        switch type {
+        case "codeFilled":
+            autofillStatus = .filled
+            pendingDeviceCode = nil
+        case "codeNotFound":
+            autofillStatus = .notFound
+        default:
+            break
+        }
     }
 
     func goBack() { webView?.goBack() }

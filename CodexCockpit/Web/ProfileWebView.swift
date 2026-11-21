@@ -17,6 +17,14 @@ struct ProfileWebView: UIViewRepresentable {
         configuration.websiteDataStore = ProfileDataStore.store(for: dataStoreIdentifier)
         configuration.defaultWebpagePreferences.allowsContentJavaScript = true
         configuration.preferences.javaScriptCanOpenWindowsAutomatically = true
+        configuration.userContentController.addUserScript(DeviceCodeAutofill.userScript)
+        let autofillProxy = WeakScriptMessageHandler(delegate: context.coordinator)
+        configuration.userContentController.add(
+            autofillProxy,
+            contentWorld: .defaultClient,
+            name: DeviceCodeAutofill.messageHandlerName
+        )
+        context.coordinator.autofillProxy = autofillProxy
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
@@ -39,15 +47,21 @@ struct ProfileWebView: UIViewRepresentable {
 
     static func dismantleUIView(_ webView: WKWebView, coordinator: Coordinator) {
         coordinator.stopObserving(webView)
+        webView.configuration.userContentController.removeScriptMessageHandler(
+            forName: DeviceCodeAutofill.messageHandlerName,
+            contentWorld: .defaultClient
+        )
+        coordinator.autofillProxy = nil
         webView.navigationDelegate = nil
         webView.uiDelegate = nil
         webView.stopLoading()
     }
 
-    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
+    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler {
         private let state: BrowserState
         private let onIdentityDetected: ((WebAccountIdentity) -> Void)?
         private var observations: [NSKeyValueObservation] = []
+        var autofillProxy: WeakScriptMessageHandler?
 
         init(
             state: BrowserState,
@@ -120,27 +134,18 @@ struct ProfileWebView: UIViewRepresentable {
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             state.update(from: webView)
             probeChatGPTIdentity(in: webView)
-            guard webView.url?.host == AppURLs.deviceLogin.host,
-                  webView.url?.path.hasPrefix(AppURLs.deviceLogin.path) == true,
-                  let code = state.pendingDeviceCode else { return }
-            state.pendingDeviceCode = nil
+            state.fillPendingDeviceCodeIfPossible()
+        }
 
-            let encoded = code
-                .replacingOccurrences(of: "\\", with: "\\\\")
-                .replacingOccurrences(of: "'", with: "\\'")
-            let script = """
-            (() => {
-              const input = document.querySelector('input[autocomplete="one-time-code"], input[name*="code" i], input[id*="code" i], input[type="text"]');
-              if (!input) return false;
-              const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
-              setter.call(input, '\(encoded)');
-              input.dispatchEvent(new Event('input', { bubbles: true }));
-              input.dispatchEvent(new Event('change', { bubbles: true }));
-              input.focus();
-              return true;
-            })();
-            """
-            webView.evaluateJavaScript(script)
+        func userContentController(
+            _ userContentController: WKUserContentController,
+            didReceive message: WKScriptMessage
+        ) {
+            guard message.name == DeviceCodeAutofill.messageHandlerName,
+                  DeviceCodeAutofill.supports(message.webView?.url),
+                  let body = message.body as? [String: Any],
+                  let type = body["type"] as? String else { return }
+            state.handleAutofillMessage(type: type)
         }
 
         private func probeChatGPTIdentity(in webView: WKWebView) {

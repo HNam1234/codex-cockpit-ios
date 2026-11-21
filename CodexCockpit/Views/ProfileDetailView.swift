@@ -232,6 +232,7 @@ struct AccountBrowserView: View {
                 .id(webViewGeneration)
                 if browser.isLoading { ProgressView(value: browser.progress).progressViewStyle(.linear) }
             }
+            autofillStatusChip
             Divider()
             HStack {
                 Button { browser.goBack() } label: { Image(systemName: "chevron.backward") }.disabled(!browser.canGoBack)
@@ -259,7 +260,7 @@ struct AccountBrowserView: View {
         }
         .onAppear {
             if let code = launch.code {
-                browser.pendingDeviceCode = code
+                browser.pendingDeviceCode = DeviceCode.normalize(code)
                 UIPasteboard.general.string = code
             }
         }
@@ -287,6 +288,28 @@ struct AccountBrowserView: View {
     private var initialURL: URL {
         if let value = launch.verificationURL, let url = URL(string: value) { return url }
         return launch.mode == .device ? AppURLs.deviceLogin : AppURLs.chatGPT
+    }
+
+    @ViewBuilder
+    private var autofillStatusChip: some View {
+        switch browser.autofillStatus {
+        case .filled:
+            Label("Đã điền code ✓", systemImage: "checkmark.circle.fill")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.green)
+                .padding(.horizontal, 12).padding(.vertical, 7)
+                .frame(maxWidth: .infinity)
+                .background(.bar)
+        case .notFound:
+            Label("Không tìm thấy ô — đã copy code, hãy dán", systemImage: "doc.on.clipboard")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.orange)
+                .padding(.horizontal, 12).padding(.vertical, 7)
+                .frame(maxWidth: .infinity)
+                .background(.bar)
+        case .idle, .waiting:
+            EmptyView()
+        }
     }
 }
 
