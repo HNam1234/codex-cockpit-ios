@@ -41,8 +41,8 @@ final class BrowserState: ObservableObject {
         }
     }
 
-    func openDeviceLogin(code: String) {
-        let normalized = DeviceCode.normalize(code)
+    func openDeviceLogin(code: String? = nil) {
+        let normalized = code.map(DeviceCode.normalize) ?? ""
         pendingDeviceCode = normalized.isEmpty ? nil : normalized
         if DeviceCodeAutofill.supports(webView?.url) { return }
         open(AppURLs.deviceLogin)

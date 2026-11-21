@@ -5,6 +5,12 @@ import WebKit
 final class WebViewPool {
     static let shared = WebViewPool()
 
+    enum NavigationDecision: Equatable {
+        case keep
+        case load
+        case reload
+    }
+
     private final class Entry {
         let profile: WebProfile
         let webView: WKWebView
@@ -112,23 +118,29 @@ final class WebViewPool {
         entry.container = container
         entry.sessionDelegate.onIdentityDetected = onIdentityDetected
 
-        let devicePageIsStale = DeviceCodeAutofill.supports(initialRequest.url)
-            && DeviceCodeAutofill.supports(webView.url)
-            && !webView.isLoading
-            && (entry.sessionDelegate.lastFinishedAt.map {
-                Date().timeIntervalSince($0) >= 10 * 60
-            } ?? false)
-        if devicePageIsStale {
-            webView.reload()
-        }
-
         let needsAttachment = webView.superview !== container
         if needsAttachment {
             webView.removeFromSuperview()
             webView.frame = container.bounds
             webView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
             container.addSubview(webView)
-            state.attach(webView, initialRequest: initialRequest)
+            state.attach(webView)
+
+            if let requestedURL = initialRequest.url {
+                switch Self.shouldNavigate(
+                    current: webView.url,
+                    requested: requestedURL,
+                    lastFinishedAt: entry.sessionDelegate.lastFinishedAt,
+                    now: Date()
+                ) {
+                case .keep:
+                    state.fillPendingDeviceCodeIfPossible()
+                case .load:
+                    state.open(initialRequest)
+                case .reload:
+                    webView.reload()
+                }
+            }
         }
     }
 
@@ -151,22 +163,47 @@ final class WebViewPool {
 
     func prewarm(profile: WebProfile, url: URL = AppURLs.deviceLogin) {
         guard Self.prewarmEnabled else { return }
+        let isNewEntry = entries[profile.id] == nil
         let (webView, state) = webView(for: profile)
         guard let entry = entries[profile.id], entry.container == nil else { return }
 
         entry.lastUsed = Date()
-        let isRequestedPage = webView.url?.host?.lowercased() == url.host?.lowercased()
-            && webView.url?.path.hasPrefix(url.path) == true
-        let isFresh = entry.sessionDelegate.lastFinishedAt.map {
-            Date().timeIntervalSince($0) < 10 * 60
-        } ?? false
-
-        if isRequestedPage, isFresh { return }
-        if isRequestedPage, webView.url != nil {
-            webView.reload()
-        } else {
-            state.open(url)
+        if !isNewEntry, webView.isLoading { return }
+        if !isNewEntry,
+           let currentURL = webView.url,
+           !Self.isBlank(currentURL),
+           !DeviceCodeAutofill.supports(currentURL) {
+            return
         }
+
+        switch Self.shouldNavigate(
+            current: webView.url,
+            requested: url,
+            lastFinishedAt: entry.sessionDelegate.lastFinishedAt,
+            now: Date()
+        ) {
+        case .keep:
+            return
+        case .load:
+            state.open(url)
+        case .reload:
+            webView.reload()
+        }
+    }
+
+    nonisolated static func shouldNavigate(
+        current: URL?,
+        requested: URL,
+        lastFinishedAt: Date?,
+        now: Date
+    ) -> NavigationDecision {
+        guard let current, !isBlank(current) else { return .load }
+        guard pageKey(current) == pageKey(requested) else { return .load }
+
+        guard DeviceCodeAutofill.supports(requested) else { return .keep }
+        guard let lastFinishedAt,
+              now.timeIntervalSince(lastFinishedAt) < 10 * 60 else { return .reload }
+        return .keep
     }
 
     func evict(profileID: String) {
@@ -187,6 +224,19 @@ final class WebViewPool {
         let defaults = UserDefaults.standard
         let key = "CodexCockpit.prewarm.v1"
         return defaults.object(forKey: key) == nil || defaults.bool(forKey: key)
+    }
+
+    nonisolated private static func isBlank(_ url: URL) -> Bool {
+        url.absoluteString.lowercased() == "about:blank"
+    }
+
+    nonisolated private static func pageKey(_ url: URL) -> String {
+        let host = url.host?.lowercased() ?? ""
+        var path = url.path.isEmpty ? "/" : url.path
+        while path.count > 1, path.hasSuffix("/") {
+            path.removeLast()
+        }
+        return "\(host)\(path)"
     }
 
     private func pruneForInsertion(excluding profileID: String) {

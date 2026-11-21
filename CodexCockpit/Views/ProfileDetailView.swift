@@ -276,10 +276,10 @@ struct AccountBrowserView: View {
         }
         .onAppear {
             WebViewPool.shared.setVisible(true, profileID: profile.id)
-            if let code = launch.code {
-                let normalized = DeviceCode.normalize(code)
-                browser.pendingDeviceCode = normalized
-                if !normalized.isEmpty {
+            if launch.mode == .device {
+                let normalized = launch.code.map(DeviceCode.normalize)
+                browser.openDeviceLogin(code: normalized)
+                if let normalized, !normalized.isEmpty {
                     UIPasteboard.general.string = normalized
                 }
             }
