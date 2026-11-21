@@ -32,6 +32,9 @@ assert "onIdentityDetected" in web_source
 for forbidden_web_read in ("document.cookie", "localStorage", "sessionStorage"):
     assert forbidden_web_read not in web_source, f"forbidden WebKit secret read: {forbidden_web_read}"
 
+autofill_source = (root / "CodexCockpit/Web/DeviceCodeAutofill.swift").read_text(encoding="utf-8")
+assert "webView.evaluateJavaScript(script, in: nil, in: .defaultClient)" in autofill_source
+
 notification_source = (root / "CodexCockpit/Services/TiboNotificationManager.swift").read_text(encoding="utf-8")
 assert "requestAuthorization" in notification_source
 assert "historyKey" in notification_source

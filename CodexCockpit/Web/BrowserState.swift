@@ -14,10 +14,11 @@ final class BrowserState: ObservableObject {
 
     weak var webView: WKWebView?
     var pendingRequest: URLRequest?
+    private var autofillStatusResetTask: Task<Void, Never>?
     var pendingDeviceCode: String? {
         didSet {
             guard pendingDeviceCode != nil else { return }
-            autofillStatus = .waiting
+            setAutofillStatus(.waiting)
             fillPendingDeviceCodeIfPossible()
         }
     }
@@ -53,20 +54,20 @@ final class BrowserState: ObservableObject {
               webView.isLoading == false,
               DeviceCodeAutofill.supports(webView.url) else { return }
 
-        autofillStatus = .waiting
+        setAutofillStatus(.waiting)
         DeviceCodeAutofill.fill(code: code, in: webView) { [weak self] started in
             guard let self, !started, self.pendingDeviceCode != nil else { return }
-            self.autofillStatus = .notFound
+            self.setAutofillStatus(.notFound)
         }
     }
 
     func handleAutofillMessage(type: String) {
         switch type {
         case "codeFilled":
-            autofillStatus = .filled
+            setAutofillStatus(.filled, resetAfterNanoseconds: 4_000_000_000)
             pendingDeviceCode = nil
         case "codeNotFound":
-            autofillStatus = .notFound
+            setAutofillStatus(.notFound)
         default:
             break
         }
@@ -89,9 +90,28 @@ final class BrowserState: ObservableObject {
     func update(from webView: WKWebView) {
         title = webView.title ?? ""
         currentURL = webView.url
+        if !DeviceCodeAutofill.supports(webView.url) {
+            setAutofillStatus(.idle)
+        }
         canGoBack = webView.canGoBack
         canGoForward = webView.canGoForward
         isLoading = webView.isLoading
         progress = webView.estimatedProgress
+    }
+
+    private func setAutofillStatus(
+        _ status: AutofillStatus,
+        resetAfterNanoseconds delay: UInt64? = nil
+    ) {
+        autofillStatusResetTask?.cancel()
+        autofillStatusResetTask = nil
+        autofillStatus = status
+
+        guard let delay else { return }
+        autofillStatusResetTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: delay)
+            guard !Task.isCancelled else { return }
+            self?.autofillStatus = .idle
+        }
     }
 }

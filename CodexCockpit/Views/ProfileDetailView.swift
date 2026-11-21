@@ -260,8 +260,11 @@ struct AccountBrowserView: View {
         }
         .onAppear {
             if let code = launch.code {
-                browser.pendingDeviceCode = DeviceCode.normalize(code)
-                UIPasteboard.general.string = code
+                let normalized = DeviceCode.normalize(code)
+                browser.pendingDeviceCode = normalized
+                if !normalized.isEmpty {
+                    UIPasteboard.general.string = normalized
+                }
             }
         }
         .sheet(isPresented: $showingCodeEntry) {

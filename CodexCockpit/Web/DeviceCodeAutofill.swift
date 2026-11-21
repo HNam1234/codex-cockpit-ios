@@ -43,8 +43,14 @@ enum DeviceCodeAutofill {
           return true;
         })();
         """
-        webView.evaluateJavaScript(script) { result, error in
-            let started = error == nil && (result as? Bool) == true
+        webView.evaluateJavaScript(script, in: nil, in: .defaultClient) { result in
+            let started: Bool
+            switch result {
+            case .success(let value):
+                started = (value as? Bool) == true
+            case .failure:
+                started = false
+            }
             DispatchQueue.main.async { completion?(started) }
         }
     }
