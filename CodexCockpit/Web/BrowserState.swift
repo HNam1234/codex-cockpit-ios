@@ -34,7 +34,8 @@ final class BrowserState: ObservableObject {
     }
 
     func openDeviceLogin(code: String) {
-        pendingDeviceCode = code.isEmpty ? nil : code
+        let normalized = DeviceCode.normalize(code)
+        pendingDeviceCode = normalized.isEmpty ? nil : normalized
         open(AppURLs.deviceLogin)
     }
 

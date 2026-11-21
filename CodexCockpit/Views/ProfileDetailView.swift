@@ -302,6 +302,10 @@ private struct DeviceCodeSheet: View {
                     TextField("ABCD-EFGH", text: $code)
                         .textInputAutocapitalization(.characters).autocorrectionDisabled()
                         .font(.system(.title3, design: .monospaced, weight: .semibold))
+                        .onChange(of: code) { _, newValue in
+                            let normalized = DeviceCode.normalize(newValue)
+                            if normalized != newValue { code = normalized }
+                        }
                     Text("Mã chỉ được copy cục bộ và điền vào auth.openai.com trong WebKit đang mở.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
@@ -311,7 +315,7 @@ private struct DeviceCodeSheet: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Hủy") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Mở OpenAI") {
-                        onOpen(code.uppercased().filter { $0.isLetter || $0.isNumber || $0 == "-" })
+                        onOpen(DeviceCode.normalize(code))
                     }
                 }
             }
